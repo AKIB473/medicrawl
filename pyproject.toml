@@ -1,0 +1,28 @@
+[project]
+name = "medicine-data-scraper"
+version = "0.1.0"
+description = "Unified pharmaceutical data scraper and pipeline"
+authors = [{name = "Akibuzzaman Akib", email = "akibuzzaman7@gmail.com"}]
+readme = "README.md"
+license = {text = "MIT"}
+requires-python = ">=3.11"
+
+dependencies = [
+    "pydantic>=2.0",
+    "orjson>=3.9",
+    "sqlite-utils>=3.35",
+    "curl_cffi>=0.11",
+    "cloudscraper>=1.2",
+    "playwright>=1.40",
+    "httpx>=0.25",
+    "beautifulsoup4>=4.12",
+]
+
+[tool.black]
+line-length = 100
+target-version = ['py311']
+
+[tool.mypy]
+python_version = "3.11"
+warn_return_any = true
+warn_unused_configs = true

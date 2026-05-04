@@ -1,5 +1,4 @@
 # 🏥 **Medicrawl** — Unified Medicine Data Scraper  
-**Built by Akibuzzaman Akib** (@akibuzzaman7)  
 *Your complete medicine database crawler and intelligence platform*
 
 <div align="center">
@@ -10,8 +9,6 @@
 ![Python](https://img.shields.io/badge/python-3.11%2B-blue?style=for-the-badge&logo=python)
 ![Contributors](https://img.shields.io/github/contributors/AKIB473/medicrawl?style=for-the-badge)
 
-[![Twitter Follow](https://img.shields.io/twitter/follow/akibuzzaman7?style=for-the-badge&label=Follow%20on%20Twitter)](https://twitter.com/akibuzzaman7)
-[![Telegram](https://img.shields.io/badge/Telegram-@akibuzzaman7-26A5E4?style=for-the-badge&logo=telegram)](https://t.me/akibuzzaman7)
 
 </div>
 
@@ -79,7 +76,6 @@ Medicrawl was created to solve a critical problem: **fragmented medicine informa
 
 ## 👤 **Author Profile**
 
-### **Akibuzzaman Akib** (@akibuzzaman7)
 
 **Role:** Lead Developer | System Architect | Data Engineer  
 **Location:** Bangladesh  
@@ -95,15 +91,8 @@ A dedicated software engineer and data enthusiast specializing in web scraping, 
 - Database Design (SQLite, PostgreSQL)
 - REST APIs & Integration
 
-**Contact:**
-- 📧 **Email:** akibuzzaman7@gmail.com
-- 📱 **Telegram:** [@akibuzzaman7](https://t.me/akibuzzaman7)
-- 🐙 **GitHub:** [@akibuzzaman7](https://github.com/akibuzzaman7)
-
-**Social:**
-[![GitHub](https://img.shields.io/badge/github-%23121011.svg?style=for-the-badge&logo=github&logoColor=white)](https://github.com/akibuzzaman7)
-[![Telegram](https://img.shields.io/badge/telegram-%2326A5E4.svg?style=for-the-badge&logo=telegram&logoColor=white)](https://t.me/akibuzzaman7)
-[![Gmail](https://img.shields.io/badge/gmail-D14836?style=for-the-badge&logo=gmail&logoColor=white)](mailto:akibuzzaman7@gmail.com)
+**GitHub:**
+- 🐙 [@akibuzzaman7](https://github.com/akibuzzaman7)
 
 ---
 
@@ -734,7 +723,6 @@ SOFTWARE.
 ### **Connect**
 
 - 🐙 GitHub: [@akibuzzaman7](https://github.com/akibuzzaman7)
-- 📧 Email: akibuzzaman7@gmail.com
 - 🌐 Website: [github.com/akibuzzaman7](https://github.com/akibuzzaman7)
 
 ---
@@ -747,7 +735,11 @@ SOFTWARE.
 
 *Making medicine information accessible to everyone, everywhere.*
 
-[![GitHub stars](https://img.shields.io/github/stars/AKIB473/medicrawl?style=social)](https://github.com/AKIB473/medicrawl/stargazers)
+[![GitHub stars](https://img.shields.io/github/stars/AKIB473/medicrawl?style=for-the-badge)]
+[![Forks](https://img.shields.io/github/forks/AKIB473/medicrawl?style=for-the-badge)]
+[![License](https://img.shields.io/github/license/AKIB473/medicrawl?style=for-the-badge)]
+[![Python](https://img.shields.io/badge/python-3.11%2B-blue?style=for-the-badge[![GitHub stars](https://img.shields.io/github/stars/AKIB473/medicrawl?style=social)](https://github.com/AKIB473/medicrawl/stargazers)logo=python)]
+[![Contributors](https://img.shields.io/github/contributors/AKIB473/medicrawl?style=for-the-badge)]
 [![GitHub forks](https://img.shields.io/github/forks/AKIB473/medicrawl?style=social)](https://github.com/AKIB473/medicrawl/network/members)
 [![GitHub watchers](https://img.shields.io/github/watchers/AKIB473/medicrawl?style=social)](https://github.com/AKIB473/medicrawl/watchers)
 

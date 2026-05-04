@@ -26,3 +26,7 @@ target-version = ['py311']
 python_version = "3.11"
 warn_return_any = true
 warn_unused_configs = true
+
+[tool.setuptools.packages.find]
+exclude = ["tests*", "data*"]
+

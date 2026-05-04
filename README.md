@@ -12,76 +12,47 @@
 
 ## 🌟 Overview
 
-<div align="center">
+**Medicine Data Scraper** is a backend-grade production pipeline that unifies pharmaceutical information from multiple global sources into one clean, deduplicated, structured database. Built for researchers, pharmacists, developers, and healthcare innovators.
 
-<img src="https://readme-typing-svg.demolab.com?font=Inter&weight=700&size=42&duration=3500&pause=1000&color=2E86AB&center=true&vCenter=true&width=650&height=100&lines=MEDICINE+DATA+SCRAPER%3BUnified+Pharmaceutical+Intelligence%3BBuilt+by+Akibuzzaman+Akib"
-  alt="Typing SVG" />
-
-</div>
-
-**Medicine Data Scraper** is a backend-grade, production-ready data pipeline that **unifies pharmaceutical information from multiple global sources** into one clean, deduplicated, structured database. Built for researchers, pharmacists, developers, and healthcare innovators.
-
-*Created and maintained with ❤️ by **Akibuzzaman Akib** (@akibuzzaman7)*
+*Created & maintained with ❤️ by **Akibuzzaman Akib** (@akibuzzaman7)*
 
 ---
 
 ## 🤝 Contributing
 
-We ❤️ contributions! This project welcomes everyone to help build the most comprehensive pharmaceutical database.
-
-👉 **[Read our full Contributing Guide](CONTRIBUTING.md)**
+We ❤️ contributions! 👉 **[Read CONTRIBUTING.md](CONTRIBUTING.md)** for detailed guidelines.
 
 ### 🏆 Contributors
 
 | Contributor | Role | Contributions |
 |-------------|------|---------------|
-| **[@akibuzzaman7](https://github.com/akibuzzaman7)** | 🥇 Lead Developer | All scrapers, bypass system, pipeline architecture, database design |
+| **[@akibuzzaman7](https://github.com/akibuzzaman7)** | 🥇 Lead Developer | All scrapers, bypass system, pipeline, database design |
 | You? | 🥈 Contributor | *(Add your name via PR!)* |
 
-*Every contributor will be credited in [AUTHORS.md](AUTHORS.md)!*
-
-### 🚀 How to Contribute
-
-1. **Pick an issue** from [GitHub Issues](https://github.com/AKIB473/medicine-data-scraper/issues)
-2. **Read [CONTRIBUTING.md](CONTRIBUTING.md)** for guidelines
-3. **Fork → Branch → Code → Test → PR**
-4. **Get credited** in the project!
-
-### 🎯 Good First Issues
-
-- Add a new pharmaceutical data scraper
-- Improve drug name normalization
-- Add data validation rules
-- Enhance search functionality (FTS5)
-- Create export formats (CSV, Parquet)
-- Write unit tests
+Every contributor credited in [AUTHORS.md](AUTHORS.md)!
 
 ---
 
-## 📊 Data Sources
+## 📊 Data Sources (29 Scrapers)
 
-We aggregate pharmaceutical data from multiple sources:
+### Bangladesh (6)
+- MedEx BD — Local drug database with clinical info
+- Arogga — 56k+ products with pricing
+- Osudpotro — Government registry (7L+ items)
+- DIMS — Drug inventory management
+- BDMedEx — Medicine marketplace
+- BD Drugs/Stores — Local pharmacy listings
 
-### Bangladesh Sources (6)
-- **MedEx BD** — Local drug database with clinical info
-- **Arogga** — 56k+ products with pricing
-- **Osudpotro** — Government registry (7L+ items)
-- **DIMS** — Drug inventory management
-- **BDMedEx** — Medicine marketplace
-- **BD Drugs/Stores** — Local pharmacy listings
-
-### International Sources (23+)
-- **OpenFDA** — US drug labels, adverse events
-- **RxNorm** — NLM standard identifiers
-- **DailyMed** — Structured product labels
-- **PubChem** — 100M+ compounds, chemical data
-- **ChEMBL** — Bioactivity database
-- **DrugBank** — Comprehensive drug database
-- **ClinCalc** — Top prescribed drugs
-- **Drugs.com** — Consumer drug information
-- **WebMD/EMC/MIMS** — Monographs, PIL
-
-*+ More sources being added continuously*
+### International (23)
+- OpenFDA — US drug labels, adverse events
+- RxNorm — NLM standard identifiers
+- DailyMed — Structured product labels
+- PubChem — 100M+ compounds
+- ChEMBL — Bioactivity database
+- DrugBank — Comprehensive drug database
+- ClinCalc — Top prescribed drugs
+- Drugs.com — Consumer drug information
+- WebMD/EMC/MIMS — Monographs
 
 ---
 
@@ -89,57 +60,37 @@ We aggregate pharmaceutical data from multiple sources:
 
 ```
 
-        MULTIPLE SCRAPERS (Parallel)           
-  ┌───────────┐ ┌───────────┐ ┌─────────┐ 
-  │   BD      │ │   API     │ │  Scrape │ 
-  │ Sources 6 │ │ Sources   │ │ Sources │ 
-  │           │ │ 15+       │ │ 8+      │ 
-  └───────────┘ └───────────┘ └─────────┘ 
-       │                 │              │
-       └─────────────────┼──────────────┘
-                        ▼
-             
-        Bypass Stack (4 Levels)        
-             
-      1. curl_cffi  (TLS spoof)      ⚡
-      2. cloudscraper (JS solve)      🌐
-      3. playwright (full browser)   🎭
-      4. httpx       (fallback)      🔄
-             
-                        ▼
-             
-       Normalizer (Pydantic)          
-             
-      • Standardize drug names         
-      • Canonical IDs (hash)           
-      • Clean strengths/forms          
-      • Handle None gracefully         
-             
-                        ▼
-             
-        Merger (De-duplication)        
-             
-      • Group by canonical_id          
-      • Prioritize sources             
-      • Merge multi-source fields      
-      • Preserve all metadata          
-             
-                        ▼
-             
-        SQLite Database (WAL)          
-             
-      Tables:                          
-      • drugs          (canonical)     
-      • brand_names    (aliases)       
-      • prices         (currency)      
-      • clinical       (indications)   
-      • chemistry      (formula)       
-      • sources        (provenance)    
-             
-                        ▼
-             
-        Export: DB + JSON Files        
-             
+  29 SCRAPERS (Parallel)     
+  BD:6  API:15  Scrape:8      
+
+         ▼
+  Bypass Stack (4 Levels)     
+  1.curl_cffi  TLS spoof ⚡    
+  2.cloudscraper  JS solve 🌐 
+  3.playwright  Full browser 🎭
+  4.httpx  fallback 🔄        
+
+         ▼
+  Normalizer (Pydantic)       
+  • Canonical IDs (hash)      
+  • Standardize names         
+  • Handle None gracefully    
+
+         ▼
+  Merger (De-duplication)     
+  • Group by canonical_id     
+  • Prioritize sources        
+  • Merge multi-source fields 
+
+         ▼
+  SQLite Database (WAL)       
+  • drugs, brand_names        
+  • prices, clinical          
+  • chemistry, sources        
+
+         ▼
+  Export: DB + JSON           
+
 ```
 
 ---
@@ -149,13 +100,13 @@ We aggregate pharmaceutical data from multiple sources:
 **Progressive 4-Level Stack** — Fully automatic:
 
 ```
-1️⃣ curl_cffi    → TLS/HTTP2 impersonation (0.5-2s) ⚡
+1️⃣ curl_cffi    → TLS/HTTP2 impersonation (0.5-2s) ⚡ Fastest
    ↓ (if rate-limited / JS challenge)
 2️⃣ cloudscraper → Direct Cloudflare solver (2-5s) 🌐
    ↓ (if blocked / CAPTCHA)
-3️⃣ playwright   → Headless Chrome (5-10s) 🎭
+3️⃣ playwright   → Headless Chrome (5-10s) 🎭 Full render
    ↓ (if all else fails)
-4️⃣ httpx        → Simple fallback 🔄
+4️⃣ httpx        → Simple fallback (no CF) 🔄
 ```
 
 - Per-domain sessions maintain cookies/CF clearance
@@ -166,13 +117,18 @@ We aggregate pharmaceutical data from multiple sources:
 
 ## 🗄️ Database Schema
 
-### Main Tables
+**Main Tables:**
+- `drugs` — Canonical drugs (one row per unique drug)
+- `brand_names` — Brand name aliases
+- `prices` — Pricing data
+- `clinical` — Clinical information
+- `chemistry` — Chemical data
+- `sources` — Source provenance
 
 ```sql
--- Canonical drugs (one row per unique drug)
 CREATE TABLE drugs (
     id INTEGER PRIMARY KEY,
-    canonical_id TEXT UNIQUE,       -- SHA256(generic+form+strength)
+    canonical_id TEXT UNIQUE,       -- SHA256(generic|form|strength)
     generic_name TEXT,
     dosage_form TEXT,
     strength TEXT,
@@ -183,11 +139,9 @@ CREATE TABLE drugs (
     molecular_formula TEXT,
     pubchem_cid INTEGER,
     rxcui TEXT,
-    unii TEXT,
     created_at TIMESTAMP
 );
 
--- Brand name aliases
 CREATE TABLE brand_names (
     drug_id INTEGER REFERENCES drugs(id),
     brand_name TEXT,
@@ -195,7 +149,6 @@ CREATE TABLE brand_names (
     is_primary BOOLEAN
 );
 
--- Pricing data
 CREATE TABLE prices (
     drug_id INTEGER REFERENCES drugs(id),
     amount REAL,
@@ -205,7 +158,6 @@ CREATE TABLE prices (
     last_updated TIMESTAMP
 );
 
--- Clinical information
 CREATE TABLE clinical (
     drug_id INTEGER REFERENCES drugs(id),
     indications TEXT[],
@@ -216,7 +168,6 @@ CREATE TABLE clinical (
     warnings TEXT[]
 );
 
--- Chemical data
 CREATE TABLE chemistry (
     drug_id INTEGER REFERENCES drugs(id),
     molecular_formula TEXT,
@@ -227,7 +178,6 @@ CREATE TABLE chemistry (
     kegg_id TEXT
 );
 
--- Source provenance
 CREATE TABLE sources (
     drug_id INTEGER REFERENCES drugs(id),
     source_name TEXT,
@@ -241,28 +191,29 @@ CREATE TABLE sources (
 
 ## 🛠 CLI Commands
 
-### Main Commands
-
 ```bash
 # Full pipeline: scrape → process → DB
 python main.py run-all
 
 # Individual steps
-python main.py scrape          # Run all scrapers
+python main.py scrape          # Run all scrapers, save raw JSON
 python main.py post-process    # Merge, normalize, build SQLite
-python main.py search-db "napa" # Search database
+python main.py search-db "napa" # Search database (SQL + FTS5)
 python main.py db-stats        # Show statistics
 
 # Scraper management
-python main.py list-sources    # List all scrapers
-python main.py test-source <name>  # Test one scraper
+python main.py list-sources    # List all available scrapers
+python main.py test-source <name>  # Test one scraper (sample 5 drugs)
 ```
 
 ### Output Files
 
 ```
 data/
-├── raw/                      # Raw JSON from scrapers
+├── raw/                      # Raw JSON from each scraper
+│   ├── medex.json
+│   ├── openfda.json
+│   └── ...
 ├── merged_drugs.json         # Unified, deduplicated JSON
 └── medicine_data.db          # SQLite database (WAL mode)
 ```
@@ -279,9 +230,9 @@ canonical_id = sha256(
 ).hexdigest()[:16]
 ```
 
-Same drug from different sources → same canonical ID → merged.
+Same drug from different sources → same canonical ID → merged into one row.
 
-### Field Prioritization
+### Field Prioritization (Multi-Source Merge)
 
 | Field | Priority Order |
 |-------|----------------|
@@ -303,21 +254,6 @@ Same drug from different sources → same canonical ID → merged.
 ### Example 1: Search Database
 
 ```python
-from utils.database import DrugDatabase
-
-db = DrugDatabase("data/medicine_data.db")
-results = db.search("paracetamol")
-
-for drug in results:
-    print(f"Brand: {drug['brand_name']}")
-    print(f"Generic: {drug['generic_name']}")
-    print(f"Price: {drug.get('price', 'N/A')}")
-    print("---")
-```
-
-### Example 2: Compare Prices
-
-```python
 import sqlite3, pandas as pd
 
 conn = sqlite3.connect("data/medicine_data.db")
@@ -327,13 +263,14 @@ df = pd.read_sql_query("""
     JOIN brand_names b ON d.id = b.drug_id
     JOIN prices p ON d.id = p.drug_id
     JOIN sources s ON d.id = s.drug_id
-    WHERE d.generic_name LIKE '%napa%'
+    WHERE d.generic_name LIKE '%paracetamol%'
     ORDER BY p.amount
+    LIMIT 10
 """, conn)
 print(df)
 ```
 
-### Example 3: Export to JSON
+### Example 2: Export to JSON
 
 ```python
 from utils.pipeline import DrugPipeline
@@ -341,6 +278,17 @@ from utils.pipeline import DrugPipeline
 pipeline = DrugPipeline()
 pipeline.run_full_pipeline()
 # Output: data/merged_drugs.json
+```
+
+### Example 3: Get Drug by Canonical ID
+
+```python
+from utils.database import DrugDatabase
+
+db = DrugDatabase("data/medicine_data.db")
+results = db.search("napa")
+for r in results:
+    print(r)
 ```
 
 ---
@@ -363,8 +311,15 @@ pipeline.run_full_pipeline()
 - No personal data collected
 - Respects robots.txt (where applicable)
 - Rate limiting per domain
-- No API keys required (optional DrugBank)
-- GitHub token: Use `secrets.GITHUB_TOKEN`
+- No API keys required (except optional DrugBank)
+- GitHub token: Use `secrets.GITHUB_TOKEN` (auto-provided)
+
+### Token Rotation 🔑
+
+Rotate exposed tokens immediately:
+```bash
+gh secret set GITHUB_TOKEN --body "ghp_your_new_token"
+```
 
 ---
 

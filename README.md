@@ -77,6 +77,36 @@ Medicrawl was created to solve a critical problem: **fragmented medicine informa
 
 ---
 
+## 👤 **Author Profile**
+
+### **Akibuzzaman Akib** (@akibuzzaman7)
+
+**Role:** Lead Developer | System Architect | Data Engineer  
+**Location:** Bangladesh  
+**Timezone:** Asia/Dhaka (GMT+6)  
+
+**About:**
+A dedicated software engineer and data enthusiast specializing in web scraping, data pipeline architecture, and automation. Passionate about making data accessible and building tools that solve real-world problems.
+
+**Expertise:**
+- Python (Advanced)
+- Web Scraping & Anti-bot Bypass
+- Data Engineering & ETL Pipelines
+- Database Design (SQLite, PostgreSQL)
+- REST APIs & Integration
+
+**Contact:**
+- 📧 **Email:** akibuzzaman7@gmail.com
+- 📱 **Telegram:** [@akibuzzaman7](https://t.me/akibuzzaman7)
+- 🐙 **GitHub:** [@akibuzzaman7](https://github.com/akibuzzaman7)
+
+**Social:**
+[![GitHub](https://img.shields.io/badge/github-%23121011.svg?style=for-the-badge&logo=github&logoColor=white)](https://github.com/akibuzzaman7)
+[![Telegram](https://img.shields.io/badge/telegram-%2326A5E4.svg?style=for-the-badge&logo=telegram&logoColor=white)](https://t.me/akibuzzaman7)
+[![Gmail](https://img.shields.io/badge/gmail-D14836?style=for-the-badge&logo=gmail&logoColor=white)](mailto:akibuzzaman7@gmail.com)
+
+---
+
 ## 🚀 **Features**
 
 ### Core Capabilities

@@ -1,4 +1,4 @@
-# 🎯 Contributing to Medicine Data Scraper
+# 🎯 Contributing to Medicrawl
 
 ## 🙏 Acknowledgment
 
@@ -13,11 +13,11 @@ We welcome contributions from everyone! Please note that all contributors will b
 
 ```bash
 # Clone the repository
-git clone https://github.com/AKIB473/medicine-data-scraper.git
-cd medicine-data-scraper
+git clone https://github.com/AKIB473/medicrawl.git
+cd medicrawl
 
 # Add upstream remote
-git remote add upstream https://github.com/AKIB473/medicine-data-scraper.git
+git remote add upstream https://github.com/AKIB473/medicrawl.git
 
 # Install dependencies
 pip install -e .

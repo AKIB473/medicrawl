@@ -4,7 +4,7 @@
 
 **Akibuzzaman Akib** (@akibuzzaman7)
 - 🏗️ Initial project architecture
-- 🕷️ All scraper implementations
+- 🕷️ All scraper implementations (Medicrawl)
 - 🔐 Cloudflare/CAPTCHA bypass system (4-level progressive stack)
 - 🗄️ Database pipeline & normalization
 - 📊 Data deduplication & canonical ID system
@@ -32,24 +32,6 @@ We welcome all contributors! Please add yourself here when you contribute.
 ### Contributor Hall of Fame
 
 *Coming soon... Be the first!*
-
-We appreciate all contributions, big or small:
-- 🐛 Bug fixes
-- ✨ New features
-- 📚 Documentation improvements
-- 🌍 Translation help
-- 💡 Ideas & suggestions
-
-## 🙏 Acknowledgments
-
-Special thanks to:
-- All open-source maintainers whose tools we use
-- Bangladesh pharmaceutical community
-- Healthcare researchers worldwide
-
-## 📜 License
-
-All contributions are licensed under the MIT License (see LICENSE file).
 
 ---
 

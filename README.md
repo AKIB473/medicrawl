@@ -1,4 +1,4 @@
-# 💊 Medicine Data Scraper — Unified Pharmaceutical Intelligence
+# 💊 Medicrawl — Unified Medicine Data Scraper
 
 <div align="center">
 
@@ -12,7 +12,7 @@
 
 ## 🌟 Overview
 
-**Medicine Data Scraper** is a backend-grade production pipeline that unifies pharmaceutical information from multiple global sources into one clean, deduplicated, structured database. Built for researchers, pharmacists, developers, and healthcare innovators.
+**Medicrawl** is a backend-grade production pipeline that unifies medicine information from multiple global sources into one clean, deduplicated, structured database. Built for researchers, pharmacists, developers, and healthcare innovators.
 
 *Created & maintained with ❤️ by **Akibuzzaman Akib** (@akibuzzaman7)*
 
@@ -31,6 +31,13 @@ We ❤️ contributions! 👉 **[Read CONTRIBUTING.md](CONTRIBUTING.md)** for de
 
 Every contributor credited in [AUTHORS.md](AUTHORS.md)!
 
+### 🚀 How to Contribute
+
+1. **Pick an issue** from GitHub Issues
+2. **Read CONTRIBUTING.md** for guidelines
+3. **Fork → Branch → Code → Test → PR**
+4. **Get credited** in the project!
+
 ---
 
 ## 📊 Data Sources (29 Scrapers)
@@ -47,12 +54,12 @@ Every contributor credited in [AUTHORS.md](AUTHORS.md)!
 - OpenFDA — US drug labels, adverse events
 - RxNorm — NLM standard identifiers
 - DailyMed — Structured product labels
-- PubChem — 100M+ compounds
+- PubChem — 100M+ compounds, chemical data
 - ChEMBL — Bioactivity database
 - DrugBank — Comprehensive drug database
 - ClinCalc — Top prescribed drugs
 - Drugs.com — Consumer drug information
-- WebMD/EMC/MIMS — Monographs
+- WebMD/EMC/MIMS — Monographs, PIL
 
 ---
 
@@ -116,14 +123,6 @@ Every contributor credited in [AUTHORS.md](AUTHORS.md)!
 ---
 
 ## 🗄️ Database Schema
-
-**Main Tables:**
-- `drugs` — Canonical drugs (one row per unique drug)
-- `brand_names` — Brand name aliases
-- `prices` — Pricing data
-- `clinical` — Clinical information
-- `chemistry` — Chemical data
-- `sources` — Source provenance
 
 ```sql
 CREATE TABLE drugs (
@@ -192,54 +191,35 @@ CREATE TABLE sources (
 ## 🛠 CLI Commands
 
 ```bash
-# Full pipeline: scrape → process → DB
-python main.py run-all
-
-# Individual steps
-python main.py scrape          # Run all scrapers, save raw JSON
-python main.py post-process    # Merge, normalize, build SQLite
-python main.py search-db "napa" # Search database (SQL + FTS5)
-python main.py db-stats        # Show statistics
-
-# Scraper management
-python main.py list-sources    # List all available scrapers
-python main.py test-source <name>  # Test one scraper (sample 5 drugs)
+python main.py run-all          # Full pipeline
+python main.py scrape           # Run all scrapers
+python main.py post-process     # Merge, normalize, build SQLite
+python main.py search-db "napa" # Search database
+python main.py db-stats         # Show statistics
 ```
 
 ### Output Files
 
 ```
 data/
-├── raw/                      # Raw JSON from each scraper
-│   ├── medex.json
-│   ├── openfda.json
-│   └── ...
+├── raw/                      # Raw JSON from scrapers
 ├── merged_drugs.json         # Unified, deduplicated JSON
-└── medicine_data.db          # SQLite database (WAL mode)
+└── medicine_data.db          # SQLite database (WAL)
 ```
 
 ---
 
 ## 🧬 Data Normalization
 
-### Canonical ID Generation
+**Canonical ID:** `sha256(generic|form|strength)[:16]`
 
-```python
-canonical_id = sha256(
-    f"{generic_name.lower()}|{dosage_form.lower()}|{strength}"
-).hexdigest()[:16]
-```
-
-Same drug from different sources → same canonical ID → merged into one row.
-
-### Field Prioritization (Multi-Source Merge)
+Same medicine from different sources → same canonical ID → merged.
 
 | Field | Priority Order |
 |-------|----------------|
 | Clinical info | MedEx > DIMS > BDMedEx > OpenFDA |
 | Chemistry | PubChem > ChEMBL > DrugBank |
 | Prices | Arogga > Osudpotro > MedEx |
-| Generic names | MedEx > DIMS > RxNorm |
 
 ### Graceful None Handling
 
@@ -249,51 +229,20 @@ Same drug from different sources → same canonical ID → merged into one row.
 
 ---
 
-## 🎬 Usage Examples
-
-### Example 1: Search Database
-
-```python
-import sqlite3, pandas as pd
-
-conn = sqlite3.connect("data/medicine_data.db")
-df = pd.read_sql_query("""
-    SELECT d.generic_name, b.brand_name, p.amount, s.source_name
-    FROM drugs d
-    JOIN brand_names b ON d.id = b.drug_id
-    JOIN prices p ON d.id = p.drug_id
-    JOIN sources s ON d.id = s.drug_id
-    WHERE d.generic_name LIKE '%paracetamol%'
-    ORDER BY p.amount
-    LIMIT 10
-""", conn)
-print(df)
-```
-
-### Example 2: Export to JSON
-
-```python
-from utils.pipeline import DrugPipeline
-
-pipeline = DrugPipeline()
-pipeline.run_full_pipeline()
-# Output: data/merged_drugs.json
-```
-
-### Example 3: Get Drug by Canonical ID
+## 🎬 Usage Example
 
 ```python
 from utils.database import DrugDatabase
 
 db = DrugDatabase("data/medicine_data.db")
-results = db.search("napa")
+results = db.search("paracetamol")
 for r in results:
-    print(r)
+    print(f"{r['brand_name']}: {r['generic_name']}")
 ```
 
 ---
 
-## 📈 Current Statistics
+## 📈 Statistics
 
 | Metric | Count |
 |--------|-------|
@@ -301,45 +250,31 @@ for r in results:
 | **Active Sources** | 23+ |
 | **Bangladesh Sources** | 6 |
 | **International Sources** | 23 |
-| **Drugs in DB** | ~200k+ |
-| **Brands Tracked** | ~500k+ |
+| **Medicines in DB** | ~200k+ |
 
 ---
 
-## 🔒 Security & Privacy
+## 🔒 Security
 
-- No personal data collected
-- Respects robots.txt (where applicable)
+- No personal data
 - Rate limiting per domain
-- No API keys required (except optional DrugBank)
-- GitHub token: Use `secrets.GITHUB_TOKEN` (auto-provided)
-
-### Token Rotation 🔑
-
-Rotate exposed tokens immediately:
-```bash
-gh secret set GITHUB_TOKEN --body "ghp_your_new_token"
-```
+- No API keys required
 
 ---
 
 ## 📜 License
 
-MIT License — free for research, commercial, and learning use.
+MIT — free for research, commercial, and learning.
 
 ---
 
 ## ❤️ Acknowledgments
 
 - **Lead Developer:** [@akibuzzaman7](https://github.com/akibuzzaman7)
-- **Inspired by:** OpenFDA, RxNav, DailyMed
-- **Special thanks:** Bangladesh pharmaceutical community
-
----
 
 <div align="center">
 
 **Built with ❤️ for the healthcare community**  
-Medicine Data Scraper — Unified Pharmaceutical Intelligence  
+Medicrawl — Unified Medicine Data Scraper  
 
 </div>

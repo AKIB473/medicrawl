@@ -192,9 +192,7 @@ jobs:
           echo "Shard: ${{ matrix.shard.name }}"
           echo "Sources: ${SOURCES}"
           ARGS=()
-          if [ "${USE_FULLSCRAPE}" = "true" ]; then
-            ARGS+=(--fullscrape)
-          fi
+          ARGS+=(--fullscrape)
           read -r -a SRC_ARRAY <<< "${SOURCES}"
           ARGS+=("${SRC_ARRAY[@]}")
           python main.py scrape "${ARGS[@]}"

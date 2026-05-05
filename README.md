@@ -28,7 +28,7 @@ We ❤️ contributions! 👉 **[Read CONTRIBUTING.md](CONTRIBUTING.md)** for de
 
 | Contributor | Role | Contributions |
 |-------------|------|---------------|
-| **[@akibuzzaman7](https://github.com/akibuzzaman7)** | 🥇 Lead Developer | All crawlers, pipeline, database design |
+| **[AKIBUZZAMAN AKIB](https://github.com/AKIB473)** | 🥇 Lead Developer | All crawlers, pipeline, database design |
 | You? | 🥈 Contributor | *(Add your name via PR!)* |
 
 Every contributor credited in [AUTHORS.md](AUTHORS.md)!
@@ -267,7 +267,7 @@ MIT — free for research, commercial, and learning.
 
 ## ❤️ Acknowledgments
 
-- **Lead Developer:** [@akibuzzaman7](https://github.com/akibuzzaman7)
+- **Lead Developer:** [AKIBUZZAMAN](https://github.com/AKIB473)
 
 <div align="center">
 

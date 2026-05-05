@@ -56,7 +56,13 @@ from utils.pipeline import post_process as _post_process
 
 console = Console()
 
-ALL_SCRAPERS = {
+# ---------------------------------------------------------------------------
+# Constants
+# ---------------------------------------------------------------------------
+
+_SCRAPER_CONCURRENCY: int = 4  # max scrapers running in parallel
+
+ALL_SCRAPERS: dict = {
     # Bangladesh
     "medex": MedExScraper,
     "dims": DIMSScraper,
@@ -104,7 +110,11 @@ INTL_SCRAPERS = [
 RESEARCH_SCRAPERS = ["drugbank", "pharmgkb", "clincalc"]
 
 
-def setup_logging(verbose: bool):
+# ---------------------------------------------------------------------------
+# Helpers
+# ---------------------------------------------------------------------------
+
+def setup_logging(verbose: bool) -> None:
     level = logging.DEBUG if verbose else logging.INFO
     logging.basicConfig(
         level=level,
@@ -113,60 +123,8 @@ def setup_logging(verbose: bool):
     )
 
 
-@click.group()
-@click.option("-v", "--verbose", is_flag=True, help="Verbose logging")
-def cli(verbose: bool):
-    """Drug Scraper - Comprehensive medicine database scraper."""
-    setup_logging(verbose)
-
-
-@cli.command()
-@click.argument("sources", nargs=-1)
-@click.option("--all", "run_all", is_flag=True, help="Run all scrapers")
-@click.option("--fullscrape", is_flag=True, help="Disable source caps; if used alone, runs all sources")
-@click.option("--bd", is_flag=True, help="Run Bangladesh scrapers only")
-@click.option("--intl", is_flag=True, help="Run international scrapers only")
-@click.option("--research", is_flag=True, help="Run research scrapers only")
-@click.option("--data-dir", type=Path, default=Path("data"), help="Output directory")
-def scrape(
-    sources: tuple,
-    run_all: bool,
-    fullscrape: bool,
-    bd: bool,
-    intl: bool,
-    research: bool,
-    data_dir: Path,
-):
-    """Run scrapers for specified sources."""
-    if run_all:
-        selected = list(ALL_SCRAPERS.keys())
-    elif bd:
-        selected = BD_SCRAPERS
-    elif intl:
-        selected = INTL_SCRAPERS
-    elif research:
-        selected = RESEARCH_SCRAPERS
-    elif sources:
-        selected = list(sources)
-    elif fullscrape:
-        selected = list(ALL_SCRAPERS.keys())
-    else:
-        console.print("[red]Specify sources, or use --all, --fullscrape, --bd, --intl, --research[/red]")
-        sys.exit(1)
-
-    invalid = [s for s in selected if s not in ALL_SCRAPERS]
-    if invalid:
-        console.print(f"[red]Unknown sources: {', '.join(invalid)}[/red]")
-        sys.exit(1)
-
-    if fullscrape:
-        _enable_fullscrape_mode()
-
-    asyncio.run(_run_scrapers(selected, data_dir))
-
-
-def _enable_fullscrape_mode():
-    """Force scraper cap env vars off for true full-dataset runs."""
+def _enable_fullscrape_mode() -> None:
+    """Disable per-source record caps for a true full-dataset run."""
     cap_env_vars = [
         "EPOCRATES_MAX_DRUGS",
         "MEDSCAPE_MAX_DRUGS",
@@ -177,19 +135,29 @@ def _enable_fullscrape_mode():
     logging.info("Full scrape mode enabled: source caps disabled.")
 
 
-async def _run_scrapers(sources: list[str], data_dir: Path):
+async def _run_scrapers(
+    sources: list[str],
+    data_dir: Path,
+    concurrency: int = _SCRAPER_CONCURRENCY,
+) -> None:
+    """Run scrapers with bounded concurrency via asyncio.Semaphore."""
+    sem = asyncio.Semaphore(concurrency)
     results = []
-    for source_name in sources:
-        scraper_cls = ALL_SCRAPERS[source_name]
-        scraper = scraper_cls(data_dir=data_dir)
-        try:
-            meta = await scraper.run()
-            results.append(meta)
-        except Exception as e:
-            console.print(f"[red][{source_name}] Failed: {e}[/red]")
-            logging.exception(f"Scraper {source_name} failed")
 
-    # Print summary
+    async def _run_one(source_name: str):
+        async with sem:
+            scraper_cls = ALL_SCRAPERS[source_name]
+            scraper = scraper_cls(data_dir=data_dir)
+            try:
+                meta = await scraper.run()
+                results.append(meta)
+            except Exception as e:
+                console.print(f"[red][{source_name}] Failed: {e}[/red]")
+                logging.exception(f"Scraper {source_name} failed")
+
+    await asyncio.gather(*[_run_one(s) for s in sources])
+
+    # Print summary table
     table = Table(title="Scrape Results")
     table.add_column("Source")
     table.add_column("Drugs", justify="right")
@@ -212,9 +180,70 @@ async def _run_scrapers(sources: list[str], data_dir: Path):
     console.print(table)
 
 
+# ---------------------------------------------------------------------------
+# CLI
+# ---------------------------------------------------------------------------
+
+@click.group()
+@click.option("-v", "--verbose", is_flag=True, help="Verbose logging")
+def cli(verbose: bool) -> None:
+    """Medicrawl — Comprehensive medicine database scraper."""
+    setup_logging(verbose)
+
+
+@cli.command()
+@click.argument("sources", nargs=-1)
+@click.option("--all", "run_all", is_flag=True, help="Run all scrapers")
+@click.option("--fullscrape", is_flag=True, help="Disable source caps; if used alone, runs all sources")
+@click.option("--bd", is_flag=True, help="Run Bangladesh scrapers only")
+@click.option("--intl", is_flag=True, help="Run international scrapers only")
+@click.option("--research", is_flag=True, help="Run research scrapers only")
+@click.option("--data-dir", type=Path, default=Path("data"), help="Output directory")
+@click.option(
+    "--concurrency", default=_SCRAPER_CONCURRENCY, show_default=True,
+    help="Max scrapers running in parallel",
+)
+def scrape(
+    sources: tuple,
+    run_all: bool,
+    fullscrape: bool,
+    bd: bool,
+    intl: bool,
+    research: bool,
+    data_dir: Path,
+    concurrency: int,
+) -> None:
+    """Run scrapers for specified sources."""
+    if run_all:
+        selected = list(ALL_SCRAPERS.keys())
+    elif bd:
+        selected = list(BD_SCRAPERS)
+    elif intl:
+        selected = list(INTL_SCRAPERS)
+    elif research:
+        selected = list(RESEARCH_SCRAPERS)
+    elif sources:
+        selected = list(sources)
+    elif fullscrape:
+        selected = list(ALL_SCRAPERS.keys())
+    else:
+        console.print("[red]Specify sources, or use --all, --fullscrape, --bd, --intl, --research[/red]")
+        sys.exit(1)
+
+    invalid = [s for s in selected if s not in ALL_SCRAPERS]
+    if invalid:
+        console.print(f"[red]Unknown sources: {', '.join(invalid)}[/red]")
+        sys.exit(1)
+
+    if fullscrape:
+        _enable_fullscrape_mode()
+
+    asyncio.run(_run_scrapers(selected, data_dir, concurrency=concurrency))
+
+
 @cli.command()
 @click.option("--data-dir", type=Path, default=Path("data"))
-def check(data_dir: Path):
+def check(data_dir: Path) -> None:
     """Check which sources have changed data since last run."""
     detector = ChangeDetector(data_dir)
     changed = detector.get_changed_sources(list(ALL_SCRAPERS.keys()))
@@ -226,11 +255,9 @@ def check(data_dir: Path):
 
 @cli.command(name="post-process")
 @click.option("--data-dir", type=Path, default=Path("data"), help="Data directory")
-def post_process_cmd(data_dir: Path):
+def post_process_cmd(data_dir: Path) -> None:
     """Normalize + merge all sources → SQLite DB + merged JSON."""
-    import asyncio
-    from utils.pipeline import post_process
-    stats = asyncio.run(post_process(data_dir))
+    stats = asyncio.run(_post_process(data_dir))
     table = Table(title="Post-Process Results")
     table.add_column("Metric")
     table.add_column("Value", justify="right")
@@ -243,104 +270,11 @@ def post_process_cmd(data_dir: Path):
     console.print(table)
 
 
-@cli.command()
-@click.argument("query")
-@click.option("--data-dir", type=Path, default=Path("data"))
-@click.option("--limit", default=20, help="Max results")
-def search_db(query: str, data_dir: Path, limit: int):
-    """Search the merged drug database."""
-    import sqlite3
-    from utils.database import search
-    db_path = data_dir / "mediscrape.db"
-    if not db_path.exists():
-        console.print(f"[red]DB not found: {db_path}. Run 'post-process' first.[/red]")
-        return
-    conn = sqlite3.connect(db_path)
-    conn.row_factory = sqlite3.Row
-    results = search(conn, query, limit)
-    conn.close()
-    if not results:
-        console.print(f"[yellow]No results for '{query}'[/yellow]")
-        return
-    table = Table(title=f"Search: {query} ({len(results)} results)")
-    table.add_column("Generic Name")
-    table.add_column("Form")
-    table.add_column("Strength")
-    table.add_column("Class")
-    table.add_column("Min Price (BDT)", justify="right")
-    table.add_column("Sources", justify="right")
-    for r in results:
-        table.add_row(
-            r.get("generic_name") or "",
-            r.get("dosage_form") or "",
-            r.get("strength") or "",
-            (r.get("therapeutic_class") or "")[:30],
-            str(r.get("min_price") or ""),
-            str(r.get("source_count") or ""),
-        )
-    console.print(table)
-
-
-@cli.command()
-@click.option("--data-dir", type=Path, default=Path("data"))
-def db_stats(data_dir: Path):
-    """Show statistics about the merged drug database."""
-    import sqlite3
-    from utils.database import get_stats
-    db_path = data_dir / "mediscrape.db"
-    if not db_path.exists():
-        console.print(f"[red]DB not found: {db_path}. Run 'post-process' first.[/red]")
-        return
-    conn = sqlite3.connect(db_path)
-    conn.row_factory = sqlite3.Row
-    stats = get_stats(conn)
-    conn.close()
-    table = Table(title="Database Statistics")
-    table.add_column("Metric")
-    table.add_column("Value", justify="right")
-    for k, v in stats.items():
-        if isinstance(v, dict):
-            for sk, sv in list(v.items())[:10]:
-                table.add_row(f"  {k}: {sk}", str(sv))
-        else:
-            table.add_row(k, str(v))
-    console.print(table)
-
-
-@cli.command(name="list")
-def list_sources():
-    """List all available scraper sources."""
-    table = Table(title="Available Scrapers")
-    table.add_column("Name")
-    table.add_column("Category")
-    table.add_column("Type")
-
-    def scraper_type(name: str) -> str:
-        cls = ALL_SCRAPERS[name]
-        return "API" if any("API" in base.__name__ for base in cls.__mro__) else "scraping"
-
-    for name in BD_SCRAPERS:
-        table.add_row(name, "Bangladesh", scraper_type(name))
-    for name in INTL_SCRAPERS:
-        table.add_row(name, "International", scraper_type(name))
-    for name in RESEARCH_SCRAPERS:
-        table.add_row(name, "Research", scraper_type(name))
-
-    console.print(table)
-
-
-@cli.command(name="post-process")
-@click.option("--data-dir", type=Path, default=Path("data"), help="Data directory")
-def post_process_cmd(data_dir: Path):
-    """Normalize, merge all sources, build SQLite DB and merged JSON."""
-    asyncio.run(_post_process(data_dir))
-
-
 @cli.command(name="search")
 @click.argument("query")
 @click.option("--data-dir", type=Path, default=Path("data"), help="Data directory")
 @click.option("--limit", default=20, show_default=True, help="Max results")
-def search_cmd(query: str, data_dir: Path, limit: int):
+def search_cmd(query: str, data_dir: Path, limit: int) -> None:
     """Search the merged drug database."""
     import sqlite3 as _sqlite3
     from utils.database import search as _search
@@ -384,7 +318,7 @@ def search_cmd(query: str, data_dir: Path, limit: int):
 
 @cli.command(name="stats")
 @click.option("--data-dir", type=Path, default=Path("data"), help="Data directory")
-def stats_cmd(data_dir: Path):
+def stats_cmd(data_dir: Path) -> None:
     """Show database statistics."""
     import sqlite3 as _sqlite3
     from utils.database import get_stats as _get_stats
@@ -403,19 +337,41 @@ def stats_cmd(data_dir: Path):
     table.add_column("Metric", style="bold")
     table.add_column("Value", justify="right")
 
-    table.add_row("Total canonical drugs",   str(stats.get("total_drugs", 0)))
-    table.add_row("Total brand names",        str(stats.get("total_brands", 0)))
-    table.add_row("Total price records",      str(stats.get("total_prices", 0)))
-    table.add_row("Drugs with prices",        str(stats.get("drugs_with_prices", 0)))
-    table.add_row("Drugs w/ mechanism",       str(stats.get("drugs_with_mechanism", 0)))
-    table.add_row("Drugs w/ indications",     str(stats.get("drugs_with_indications", 0)))
-    table.add_row("Drugs w/ chemistry data",  str(stats.get("drugs_with_chemistry", 0)))
-    table.add_row("Active sources",           str(len(stats.get("sources", []))))
+    table.add_row("Total canonical drugs",  str(stats.get("total_drugs", 0)))
+    table.add_row("Total brand names",       str(stats.get("total_brands", 0)))
+    table.add_row("Total price records",     str(stats.get("total_prices", 0)))
+    table.add_row("Drugs with prices",       str(stats.get("drugs_with_prices", 0)))
+    table.add_row("Drugs w/ mechanism",      str(stats.get("drugs_with_mechanism", 0)))
+    table.add_row("Drugs w/ indications",    str(stats.get("drugs_with_indications", 0)))
+    table.add_row("Drugs w/ chemistry data", str(stats.get("drugs_with_chemistry", 0)))
+    table.add_row("Active sources",          str(len(stats.get("sources", []))))
 
     console.print(table)
 
     if stats.get("sources"):
         console.print("[bold]Sources:[/bold] " + ", ".join(stats["sources"]))
+
+
+@cli.command(name="list")
+def list_sources() -> None:
+    """List all available scraper sources."""
+    table = Table(title="Available Scrapers")
+    table.add_column("Name")
+    table.add_column("Category")
+    table.add_column("Type")
+
+    def scraper_type(name: str) -> str:
+        cls = ALL_SCRAPERS[name]
+        return "API" if any("API" in base.__name__ for base in cls.__mro__) else "scraping"
+
+    for name in BD_SCRAPERS:
+        table.add_row(name, "Bangladesh", scraper_type(name))
+    for name in INTL_SCRAPERS:
+        table.add_row(name, "International", scraper_type(name))
+    for name in RESEARCH_SCRAPERS:
+        table.add_row(name, "Research", scraper_type(name))
+
+    console.print(table)
 
 
 if __name__ == "__main__":

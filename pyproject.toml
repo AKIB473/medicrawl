@@ -17,6 +17,7 @@ dependencies = [
     "httpx>=0.25",
     "beautifulsoup4>=4.12",
     "scrapling[fetchers]>=0.4.2",
+    "tenacity>=8.2",
 ]
 
 [tool.black]

@@ -273,7 +273,6 @@ We ❤️ PRs! Please read [CONTRIBUTING.md](CONTRIBUTING.md) first. For advance
 
 **Built with ❤️ for the healthcare community**
 
-Made by **AKIBUZZAMAN AKIB** (https://github.com/AKIB473)  
-Advanced optimizations by **KiloClaw** 🤖
+Made by **AKIBUZZAMAN AKIB** (https://github.com/AKIB473)
 
 </div>

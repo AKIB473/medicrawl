@@ -2,56 +2,142 @@
 
 <div align="center">
 
-<!-- Animated SVG hero showing parallel nodes + flowing connections -->
-<svg width="720" height="220" viewBox="0 0 720 220" xmlns="http://www.w3.org/2000/svg" aria-label="Parallel scraping with checkpoint and cache">
-  <!-- Background -->
-  <rect width="100%" height="100%" fill="#0d1117"/>
-  <!-- Gradient definitions -->
+<svg width="720" height="240" viewBox="0 0 720 240" xmlns="http://www.w3.org/2000/svg" aria-label="Medicrawl Advanced: Parallel scraping with checkpoint, cache, and circuit breaker">
   <defs>
-    <linearGradient id="nodeGrad" x1="0%" y1="0%" x2="100%" y2="0%">
-      <stop offset="0%" stop-color="#58a6ff"/>
-      <stop offset="100%" stop-color="#8a63d2"/>
+    <!-- Animated background gradient -->
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0d1117">
+        <animate attributeName="stop-color" values="#0d1117;#161b22;#0d1117" dur="8s" repeatCount="indefinite"/>
+      </stop>
+      <stop offset="100%" stop-color="#161b22">
+        <animate attributeName="stop-color" values="#161b22;#0d1117;#161b22" dur="8s" repeatCount="indefinite"/>
+      </stop>
     </linearGradient>
+
+    <!-- Node gradient with shifting hue -->
+    <linearGradient id="nodeGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#58a6ff">
+        <animate attributeName="stop-color" values="#58a6ff;#8a63d2;#58a6ff" dur="4s" repeatCount="indefinite"/>
+      </stop>
+      <stop offset="100%" stop-color="#8a63d2">
+        <animate attributeName="stop-color" values="#8a63d2;#58a6ff;#8a63d2" dur="4s" repeatCount="indefinite"/>
+      </stop>
+    </linearGradient>
+
+    <!-- Link gradient with flowing -->
     <linearGradient id="lineGrad" x1="0%" y1="0%" x2="100%" y2="0%">
       <stop offset="0%" stop-color="#2ea043"/>
-      <stop offset="100%" stop-color="#1a7f37"/>
+      <stop offset="50%" stop-color="#3fb950"/>
+      <stop offset="100%" stop-color="#2ea043"/>
     </linearGradient>
+
+    <!-- Glow filter -->
+    <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="4" result="coloredBlur"/>
+      <feMerge>
+        <feMergeNode in="coloredBlur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+
+    <!-- Particle glow -->
+    <filter id="particleGlow" x="-100%" y="-100%" width="300%" height="300%">
+      <feGaussianBlur stdDeviation="2" result="blur"/>
+      <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
   </defs>
 
-  <!-- Scraper nodes (pulsing) -->
+  <!-- Background -->
+  <rect width="100%" height="100%" fill="url(#bgGrad)"/>
+
+  <!-- Background particles (slow drift) -->
+  <g fill="#58a6ff" opacity="0.15" filter="url(#particleGlow)">
+    <circle r="2"><animateMotion path="M0 0 Q360 120 720 0" dur="20s" repeatCount="indefinite"/></circle>
+    <circle r="1.5"><animateMotion path="M720 240 Q360 120 0 240" dur="25s" repeatCount="indefinite"/></circle>
+    <circle r="1"><animateMotion path="M0 120 Q720 120 0 120" dur="18s" repeatCount="indefinite"/></circle>
+  </g>
+
+  <!-- Scraper nodes with multiple animation layers -->
   <g id="nodes">
-    <circle cx="160" cy="110" r="28" fill="url(#nodeGrad)">
-      <animate attributeName="r" values="28;36;28" dur="2.2s" repeatCount="indefinite"/>
-      <animate attributeName="opacity" values="0.85;1;0.85" dur="2.2s" repeatCount="indefinite"/>
+    <!-- Node 1 -->
+    <circle cx="160" cy="120" r="32" fill="url(#nodeGrad)" filter="url(#glow)">
+      <animate attributeName="r" values="32;40;32" dur="2.5s" repeatCount="indefinite"/>
     </circle>
-    <circle cx="360" cy="110" r="28" fill="url(#nodeGrad)">
-      <animate attributeName="r" values="28;36;28" dur="2.2s" begin="0.7s" repeatCount="indefinite"/>
-      <animate attributeName="opacity" values="0.85;1;0.85" dur="2.2s" begin="0.7s" repeatCount="indefinite"/>
+    <!-- Expanding ring -->
+    <circle cx="160" cy="120" r="32" fill="none" stroke="#58a6ff" stroke-width="2" opacity="0.6">
+      <animate attributeName="r" values="32;52;32" dur="2.5s" repeatCount="indefinite"/>
+      <animate attributeName="opacity" values="0.6;0;0.6" dur="2.5s" repeatCount="indefinite"/>
     </circle>
-    <circle cx="560" cy="110" r="28" fill="url(#nodeGrad)">
-      <animate attributeName="r" values="28;36;28" dur="2.2s" begin="1.4s" repeatCount="indefinite"/>
-      <animate attributeName="opacity" values="0.85;1;0.85" dur="2.2s" begin="1.4s" repeatCount="indefinite"/>
+    <!-- Orbiting satellite -->
+    <circle r="4" fill="#fff">
+      <animateMotion path="M160 88 A40 40 0 1 1 160 152" dur="3s" repeatCount="indefinite"/>
+    </circle>
+
+    <!-- Node 2 -->
+    <circle cx="360" cy="120" r="32" fill="url(#nodeGrad)" filter="url(#glow)">
+      <animate attributeName="r" values="32;40;32" dur="2.5s" begin="0.83s" repeatCount="indefinite"/>
+    </circle>
+    <circle cx="360" cy="120" r="32" fill="none" stroke="#58a6ff" stroke-width="2" opacity="0.6">
+      <animate attributeName="r" values="32;52;32" dur="2.5s" begin="0.83s" repeatCount="indefinite"/>
+      <animate attributeName="opacity" values="0.6;0;0.6" dur="2.5s" begin="0.83s" repeatCount="indefinite"/>
+    </circle>
+    <circle r="4" fill="#fff">
+      <animateMotion path="M360 88 A40 40 0 1 1 360 152" dur="3s" begin="1s" repeatCount="indefinite"/>
+    </circle>
+
+    <!-- Node 3 -->
+    <circle cx="560" cy="120" r="32" fill="url(#nodeGrad)" filter="url(#glow)">
+      <animate attributeName="r" values="32;40;32" dur="2.5s" begin="1.66s" repeatCount="indefinite"/>
+    </circle>
+    <circle cx="560" cy="120" r="32" fill="none" stroke="#58a6ff" stroke-width="2" opacity="0.6">
+      <animate attributeName="r" values="32;52;32" dur="2.5s" begin="1.66s" repeatCount="indefinite"/>
+      <animate attributeName="opacity" values="0.6;0;0.6" dur="2.5s" begin="1.66s" repeatCount="indefinite"/>
+    </circle>
+    <circle r="4" fill="#fff">
+      <animateMotion path="M560 88 A40 40 0 1 1 560 152" dur="3s" begin="2s" repeatCount="indefinite"/>
     </circle>
   </g>
 
-  <!-- Data flow lines (animated dashes) -->
-  <g id="links">
-    <line x1="188" y1="110" x2="332" y2="110" stroke="url(#lineGrad)" stroke-width="5" stroke-linecap="round">
-      <animate attributeName="stroke-dasharray" values="0 200;200 0" dur="3s" repeatCount="indefinite"/>
-      <animate attributeName="stroke-width" values="5;7;5" dur="1.5s" repeatCount="indefinite"/>
+  <!-- Data packets flying along links -->
+  <g id="packets">
+    <circle r="5" fill="#2ea043" filter="url(#particleGlow)">
+      <animateMotion path="M188 120 L332 120" dur="2s" repeatCount="indefinite" begin="0.2s"/>
+    </circle>
+    <circle r="5" fill="#2ea043" filter="url(#particleGlow)">
+      <animateMotion path="M332 120 L188 120" dur="2s" repeatCount="indefinite" begin="1.2s"/>
+    </circle>
+    <circle r="5" fill="#2ea043" filter="url(#particleGlow)">
+      <animateMotion path="M388 120 L532 120" dur="2s" repeatCount="indefinite" begin="0.7s"/>
+    </circle>
+    <circle r="5" fill="#2ea043" filter="url(#particleGlow)">
+      <animateMotion path="M532 120 L388 120" dur="2s" repeatCount="indefinite" begin="1.7s"/>
+    </circle>
+  </g>
+
+  <!-- Connecting lines (under packets) -->
+  <g id="links" stroke="url(#lineGrad)" stroke-width="6" stroke-linecap="round" opacity="0.8">
+    <line x1="188" y1="120" x2="332" y2="120">
+      <animate attributeName="stroke-dasharray" values="0 144;144 0" dur="3s" repeatCount="indefinite"/>
     </line>
-    <line x1="388" y1="110" x2="532" y2="110" stroke="url(#lineGrad)" stroke-width="5" stroke-linecap="round">
-      <animate attributeName="stroke-dasharray" values="0 200;200 0" dur="3s" begin="1.5s" repeatCount="indefinite"/>
-      <animate attributeName="stroke-width" values="5;7;5" dur="1.5s" begin="0.75s" repeatCount="indefinite"/>
+    <line x1="388" y1="120" x2="532" y2="120">
+      <animate attributeName="stroke-dasharray" values="0 144;144 0" dur="3s" begin="1.5s" repeatCount="indefinite"/>
     </line>
   </g>
 
-  <!-- Central text with flowing color effect -->
-  <text x="360" y="170" text-anchor="middle" fill="#c9d1d9" font-family="'Segoe UI', Helvetica, Arial, sans-serif" font-size="22" font-weight="600">
+  <!-- Title with typing cursor effect -->
+  <text x="360" y="185" text-anchor="middle" fill="#c9d1d9" font-family="'Segoe UI', 'Helvetica', 'Arial', sans-serif" font-size="20" font-weight="700">
     <tspan>⚡ Parallel • 💾 Checkpoint • 📡 Cache</tspan>
     <animate attributeName="fill" values="#c9d1d9;#58a6ff;#2ea043;#c9d1d9" dur="6s" repeatCount="indefinite"/>
   </text>
+
+  <!-- Subtitle with wave animation -->
+  <text x="360" y="210" text-anchor="middle" fill="#8b949e" font-family="'Segoe UI', 'Helvetica', 'Arial', sans-serif" font-size="12">
+    <tspan>40+ Sources • 30 Shards • Zero Waste</tspan>
+    <animateTransform attributeName="transform" type="translate" values="0,0;0,-3;0,0" dur="3s" repeatCount="indefinite" additive="sum"/>
+  </text>
 </svg>
+
+
 
 </div>
 

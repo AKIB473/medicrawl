@@ -7,12 +7,12 @@ import re
 from typing import AsyncIterator
 
 from models.drug import Drug
-from scrapers.base import BaseScrapingScraper
+from scrapers.base_advanced import BaseAdvancedScraper
 
 logger = logging.getLogger(__name__)
 
 
-class WHOEMLScraper(BaseScrapingScraper):
+class WHOEMLScraper(BaseAdvancedScraper):
     name = "who_eml"
     base_url = "https://list.essentialmeds.org"
     rate_limit = 1.5
@@ -35,8 +35,15 @@ class WHOEMLScraper(BaseScrapingScraper):
                         data = orjson.loads(text[start:])
                         items = data.get("medicines", data.get("data", []))
                         if isinstance(items, list):
-                            for item in items:
-                                drug = self._parse_medicine(item)
+                            async def _process_item(item):
+                                item_id = item.get("id")
+                                if not item_id:
+                                    return None
+                                if self.checkpoint_manager and self.checkpoint_manager.is_url_completed(self.name, f"{self.base_url}/medicines/{item_id}"):
+                                    return None
+                                return self._parse_medicine(item)
+
+                            async for drug in self.concurrent_iter(items, _process_item):
                                 if drug:
                                     yield drug
                             return
@@ -60,13 +67,19 @@ class WHOEMLScraper(BaseScrapingScraper):
 
             logger.info(f"WHO EML: found {len(urls)} medicine URLs")
 
-            for url in urls:
+            url_list = self.filter_checkpoint(list(urls))
+
+            async def _process_url(url: str) -> Drug | None:
                 try:
                     drug = await self._scrape_medicine_page(url)
-                    if drug:
-                        yield drug
+                    return drug
                 except Exception as e:
                     logger.warning(f"WHO EML: error scraping {url}: {e}")
+                    return None
+
+            async for drug in self.concurrent_iter(url_list, _process_url):
+                if drug:
+                    yield drug
         except Exception as e:
             logger.error(f"WHO EML: failed to load main page: {e}")
 

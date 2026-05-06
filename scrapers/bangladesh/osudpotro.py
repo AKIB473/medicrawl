@@ -27,7 +27,7 @@ from typing import AsyncIterator
 import httpx
 import orjson
 from models.drug import Drug, Manufacturer, DrugPrice
-from scrapers.base import BaseScrapingScraper
+from scrapers.base_advanced import BaseAdvancedScraper
 
 logger = logging.getLogger(__name__)
 
@@ -46,7 +46,7 @@ _HEADERS = {
 }
 
 
-class OsudpotroScraper(BaseScrapingScraper):
+class OsudpotroScraper(BaseAdvancedScraper):
     name = "osudpotro"
     base_url = _SITE_BASE
     rate_limit = 0.3
@@ -69,17 +69,29 @@ class OsudpotroScraper(BaseScrapingScraper):
         async with httpx.AsyncClient(
             headers=auth_headers, follow_redirects=True, timeout=20
         ) as client:
-            for i, alias in enumerate(aliases):
+            alias_list = self.filter_checkpoint(list(aliases.keys()))
+            total_aliases = len(alias_list)
+            processed = 0
+            progress_lock = asyncio.Lock()
+
+            async def _process_alias(alias: str) -> Drug | None:
+                nonlocal processed
                 try:
                     drug = await self._fetch_by_alias(client, alias)
                     if drug:
-                        yield drug
+                        return drug
                 except Exception as e:
                     logger.warning(f"Osudpotro: error fetching {alias}: {e}")
+                finally:
+                    async with progress_lock:
+                        processed += 1
+                        if processed % 500 == 0:
+                            logger.info(f"Osudpotro: processed {processed}/{total_aliases}")
+                return None
 
-                if (i + 1) % 500 == 0:
-                    logger.info(f"Osudpotro: processed {i + 1}/{len(aliases)}")
-                await asyncio.sleep(self.rate_limit)
+            async for drug in self.concurrent_iter(alias_list, _process_alias):
+                if drug:
+                    yield drug
 
     # ------------------------------------------------------------------ #
     # Auth                                                                 #

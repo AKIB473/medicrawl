@@ -6,14 +6,14 @@ import logging
 from typing import AsyncIterator
 
 from models.drug import Drug, Manufacturer, DrugPrice
-from scrapers.base import BaseAPIScraper
+from scrapers.base_advanced import BaseAdvancedAPIScraper
 
 logger = logging.getLogger(__name__)
 
 BASE = "https://api.fda.gov"
 
 
-class OpenFDAScraper(BaseAPIScraper):
+class OpenFDAScraper(BaseAdvancedAPIScraper):
     name = "openfda"
     base_url = BASE
     rate_limit = 0.5  # FDA allows 40 req/min without key
@@ -36,8 +36,14 @@ class OpenFDAScraper(BaseAPIScraper):
             if not results:
                 break
 
-            for item in results:
-                drug = self._parse_label(item)
+            async def _process_item(item) -> Drug | None:
+                item_id = item.get("id") or _first(item.get("openfda", {}).get("spl_id", []))
+                expected_url = f"https://api.fda.gov/drug/label.json?skip={skip}&id={item_id}"
+                if self.checkpoint_manager and self.checkpoint_manager.is_url_completed(self.name, expected_url):
+                    return None
+                return self._parse_label(item)
+
+            async for drug in self.concurrent_iter(results, _process_item):
                 if drug:
                     yield drug
 

@@ -6,14 +6,14 @@ import logging
 from typing import AsyncIterator
 
 from models.drug import Drug
-from scrapers.base import BaseAPIScraper
+from scrapers.base_advanced import BaseAdvancedAPIScraper
 
 logger = logging.getLogger(__name__)
 
 BASE = "https://rxnav.nlm.nih.gov/REST"
 
 
-class RxNormScraper(BaseAPIScraper):
+class RxNormScraper(BaseAdvancedAPIScraper):
     name = "rxnorm"
     base_url = BASE
     rate_limit = 0.25  # NLM is generous but be polite
@@ -38,19 +38,25 @@ class RxNormScraper(BaseAPIScraper):
         concepts = all_concepts
         logger.info(f"RxNorm: {len(concepts)} total concepts")
 
-        for concept in concepts:
+        async def _process_concept(concept) -> Drug | None:
             rxcui = concept.get("rxcui")
             name = concept.get("name")
             tty = concept.get("tty")
             if not rxcui:
-                continue
-
+                return None
+            expected_url = f"https://mor.nlm.nih.gov/RxNav/search?searchBy=RXCUI&searchTerm={rxcui}"
+            if self.checkpoint_manager and self.checkpoint_manager.is_url_completed(self.name, expected_url):
+                return None
             try:
                 drug = await self._fetch_drug_details(rxcui, name, tty)
-                if drug:
-                    yield drug
+                return drug
             except Exception as e:
                 logger.warning(f"RxNorm: error fetching {rxcui}: {e}")
+                return None
+
+        async for drug in self.concurrent_iter(concepts, _process_concept):
+            if drug:
+                yield drug
 
     async def _fetch_drug_details(self, rxcui: str, name: str, tty: str) -> Drug | None:
         # Get properties

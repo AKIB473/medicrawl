@@ -6,14 +6,14 @@ import logging
 from typing import AsyncIterator
 
 from models.drug import Drug, Manufacturer
-from scrapers.base import BaseAPIScraper
+from scrapers.base_advanced import BaseAdvancedAPIScraper
 
 logger = logging.getLogger(__name__)
 
 BASE = "https://www.ebi.ac.uk/chembl/api/data"
 
 
-class ChEMBLScraper(BaseAPIScraper):
+class ChEMBLScraper(BaseAdvancedAPIScraper):
     name = "chembl"
     base_url = BASE
     rate_limit = 0.2
@@ -37,8 +37,17 @@ class ChEMBLScraper(BaseAPIScraper):
             if not molecules:
                 break
 
-            for mol in molecules:
-                drug = self._parse_molecule(mol)
+            async def _process_mol(mol) -> Drug | None:
+                chembl_id = mol.get("molecule_chembl_id")
+                if not chembl_id:
+                    return None
+                if self.checkpoint_manager:
+                    expected_url = f"https://www.ebi.ac.uk/chembl/compound_report_card/{chembl_id}/"
+                    if self.checkpoint_manager.is_url_completed(self.name, expected_url):
+                        return None
+                return self._parse_molecule(mol)
+
+            async for drug in self.concurrent_iter(molecules, _process_mol):
                 if drug:
                     yield drug
 

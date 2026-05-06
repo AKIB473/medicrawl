@@ -22,7 +22,7 @@ import re
 from typing import AsyncIterator
 
 from models.drug import Drug, Manufacturer, DrugPrice
-from scrapers.base import BaseAPIScraper
+from scrapers.base_advanced import BaseAdvancedAPIScraper
 
 logger = logging.getLogger(__name__)
 
@@ -31,7 +31,7 @@ _CANONICAL_URL = "https://dgda.gov.bd"
 _PAGE_SIZE   = 500   # DataTables page size per request
 
 
-class DGDAScraper(BaseAPIScraper):
+class DGDAScraper(BaseAdvancedAPIScraper):
     """Scrape DGDA drug database via its DataTables server-side AJAX API."""
 
     name = "dgda"
@@ -74,8 +74,17 @@ class DGDAScraper(BaseAPIScraper):
             if not rows:
                 break
 
-            for row in rows:
+            row_list = self.filter_checkpoint(rows)
+
+            async def _process_row(row) -> Drug | None:
+                dar_no = str(row[5]).strip() if len(row) > 5 else ""
+                chk_url = f"{self.base_url}/Medicine_Information?dar={dar_no}"
+                if self.checkpoint_manager and self.checkpoint_manager.is_url_completed(self.name, chk_url):
+                    return None
                 drug = self._parse_row(row)
+                return drug
+
+            async for drug in self.concurrent_iter(row_list, _process_row):
                 if drug:
                     yield drug
 

@@ -28,7 +28,7 @@ import re
 from typing import AsyncIterator
 
 from models.drug import Drug, Manufacturer, DrugPrice
-from scrapers.base import BaseScrapingScraper
+from scrapers.base_advanced import BaseAdvancedScraper
 
 logger = logging.getLogger(__name__)
 
@@ -165,7 +165,7 @@ def _split_clean(text: str) -> list[str]:
     return result
 
 
-class MedExScraper(BaseScrapingScraper):
+class MedExScraper(BaseAdvancedScraper):
     name = "medex"
     base_url = "https://medex.com.bd"
     rate_limit = 0.8
@@ -187,13 +187,20 @@ class MedExScraper(BaseScrapingScraper):
             except Exception:
                 break
 
-            for url in brand_urls:
+            brand_urls = self.filter_checkpoint(brand_urls)
+
+            async def _process_brand(url: str) -> Drug | None:
                 try:
                     drug = await self._scrape_brand_page(url)
-                    if drug:
-                        yield drug
+                    return drug
                 except Exception as e:
                     logger.warning(f"MedEx: brand error {url}: {e}")
+                    return None
+
+            async for drug in self.concurrent_iter(brand_urls, _process_brand):
+                if drug:
+                    yield drug
+
             page_num += 1
 
         # Also scrape generics pages
@@ -212,12 +219,23 @@ class MedExScraper(BaseScrapingScraper):
             except Exception:
                 break
 
-            for url in generic_urls:
+            generic_urls = self.filter_checkpoint(generic_urls)
+
+            async def _process_generic(url: str) -> list[Drug] | None:
                 try:
-                    async for drug in self._scrape_generic_page(url):
-                        yield drug
+                    drugs = []
+                    async for d in self._scrape_generic_page(url):
+                        drugs.append(d)
+                    return drugs
                 except Exception as e:
                     logger.warning(f"MedEx: generic error {url}: {e}")
+                    return []
+
+            async for result in self.concurrent_iter(generic_urls, _process_generic):
+                if result:
+                    for drug in result:
+                        yield drug
+
             page_num += 1
 
     async def _scrape_brand_page(self, url: str) -> Drug | None:

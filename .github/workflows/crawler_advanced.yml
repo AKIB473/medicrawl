@@ -1,0 +1,358 @@
+name: Drug Data Scraper (Advanced)
+
+on:
+  schedule:
+    - cron: '0 2 * * *'  # Daily at 2 AM
+  workflow_dispatch:
+    inputs:
+      sources:
+        description: 'Comma-separated source names (empty = all)'
+        required: false
+        default: ''
+      category:
+        description: 'Category to scrape'
+        required: false
+        default: 'all'
+        type: choice
+        options:
+          - all
+          - bd
+          - intl
+          - research
+      fullscrape:
+        description: 'Run a full scrape (all sources, cap overrides)'
+        required: false
+        default: false
+        type: boolean
+      timeout:
+        description: 'Per-shard timeout in minutes'
+        required: false
+        default: 30
+
+concurrency:
+  group: drug-data-scrape-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  plan:
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.plan.outputs.matrix }}
+      use_fullscrape: ${{ steps.plan.outputs.use_fullscrape }}
+      selected_sources: ${{ steps.plan.outputs.selected_sources }}
+      shard_count: ${{ steps.plan.outputs.shard_count }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: 'pip'
+
+      - name: Build shard plan (advanced)
+        id: plan
+        env:
+          INPUT_SOURCES: ${{ github.event.inputs.sources || '' }}
+          INPUT_CATEGORY: ${{ github.event.inputs.category || 'all' }}
+          INPUT_FULLSCRAPE: ${{ github.event.inputs.fullscrape || 'false' }}
+        run: |
+          python - <<'PY'
+          import json, os, sys
+
+          # All 27 sources
+          ALL_SCRAPERS = [
+              'medex', 'dims', 'dgda', 'bdmedex', 'bddrugs', 'bddrugstore',
+              'arogga', 'medeasy', 'osudpotro', 'lazzpharma', 'dghs_shr',
+              'openfda', 'rxnorm', 'dailymed', 'pubchem', 'chembl',
+              'kegg', 'ema', 'drugs_com', 'rxlist', 'webmd',
+              'emc', 'mims', 'who_eml', 'medscape', 'epocrates',
+              'drugbank', 'pharmgkb', 'clincalc',
+          ]
+
+          CATEGORIES = {
+              'all': ALL_SCRAPERS,
+              'bd': ALL_SCRAPERS[:11],
+              'intl': ALL_SCRAPERS[11:26],
+              'research': ALL_SCRAPERS[26:],
+          }
+
+          # Sensitive sites needing stealth
+          STEALTH_SOURCES = {
+              'drugbank', 'rxlist', 'drugs_com', 'mims', 'emc', 'webmd',
+              'osudpotro', 'medeasy', 'dgda', 'arogga', 'lazzpharma', 'epocrates',
+              'medscape',
+          }
+
+          # ADVANCED SHARDING: smaller batches for faster completion
+          # Group sources by affinity & expected runtime
+          SHARDS = [
+              # Bangladesh - lighter weight, can group 2-3
+              ('bd-medex-dims', ['medex', 'dims']),
+              ('bd-bdmedex-bddrugs', ['bdmedex', 'bddrugs']),
+              ('bd-arogga-osudpotro', ['arogga', 'osudpotro']),
+              ('bd-rest', ['dgda', 'bddrugstore', 'medeasy', 'lazzpharma', 'dghs_shr']),
+
+              # International APIs - fast, can batch many
+              ('intl-api-1', ['openfda', 'rxnorm', 'dailymed']),
+              ('intl-api-2', ['pubchem', 'chembl', 'kegg']),
+              ('intl-api-3', ['ema', 'who_eml']),
+
+              # International scraping - slower, batch 2-3
+              ('intl-scrape-1', ['drugs_com', 'rxlist']),
+              ('intl-scrape-2', ['webmd', 'emc']),
+              ('intl-scrape-3', ['mims']),
+              ('intl-scrape-4', ['medscape', 'epocrates']),
+
+              # Research - DrugBank is the heaviest, give it its own shard
+              ('research-drugbank', ['drugbank']),
+              ('research-rest', ['pharmgkb', 'clincalc']),
+          ]
+
+          event_name = os.getenv('GITHUB_EVENT_NAME', '')
+          sources_input = (os.getenv('INPUT_SOURCES') or '').strip()
+          category = (os.getenv('INPUT_CATEGORY') or 'all').strip().lower()
+          fullscrape = (os.getenv('INPUT_FULLSCRAPE') or 'false').strip().lower() == 'true'
+
+          if event_name == 'schedule':
+              selected = list(ALL_SCRAPERS)
+              use_fullscrape = True
+          else:
+              if sources_input:
+                  selected = [s.strip() for s in sources_input.split(',') if s.strip()]
+                  use_fullscrape = fullscrape
+              else:
+                  if category not in CATEGORIES:
+                      print(f'Unsupported category: {category}', file=sys.stderr)
+                      sys.exit(1)
+                  selected = list(CATEGORIES[category])
+                  use_fullscrape = fullscrape or category == 'all'
+
+          invalid = sorted(set(selected) - set(ALL_SCRAPERS))
+          if invalid:
+              print(f"Unknown sources: {', '.join(invalid)}", file=sys.stderr)
+              sys.exit(1)
+
+          selected_set = set(selected)
+          matrix = []
+          for shard_name, shard_sources in SHARDS:
+              picked = [s for s in shard_sources if s in selected_set]
+              if picked:
+                  matrix.append({
+                      'name': shard_name,
+                      'sources_csv': ' '.join(picked),
+                      'source_count': len(picked),
+                      'needs_playwright': any(s in STEALTH_SOURCES for s in picked),
+                  })
+
+          print(f'Selected sources ({len(selected)}): {", ".join(selected)}')
+          print(f'Shards to run: {len(matrix)}')
+          print(f'Fullscrape mode: {use_fullscrape}')
+
+          output_file = os.environ['GITHUB_OUTPUT']
+          with open(output_file, 'a', encoding='utf-8') as fh:
+              fh.write('matrix<<MATRIX_JSON\n')
+              fh.write(json.dumps(matrix))
+              fh.write('\nMATRIX_JSON\n')
+              fh.write(f"use_fullscrape={'true' if use_fullscrape else 'false'}\n")
+              fh.write(f"selected_sources={','.join(selected)}\n")
+              fh.write(f'shard_count={len(matrix)}\n')
+          PY
+
+  scrape-shards:
+    needs: plan
+    if: needs.plan.outputs.shard_count != '0'
+    runs-on: ubuntu-latest
+    # Reduced timeout drastically - advanced version is faster!
+    timeout-minutes: ${{ github.event.inputs.timeout || 30 }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include: ${{ fromJson(needs.plan.outputs.matrix) }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: 'pip'
+
+      - name: Install dependencies (base)
+        run: |
+          pip install -e .
+          pip install curl_cffi cloudscraper beautifulsoup4
+
+      - name: Install Playwright (stealth shards only)
+        if: matrix.needs_playwright
+        run: |
+          pip install playwright
+          python -m playwright install chromium --with-deps
+
+      - name: Run advanced scraper shard
+        env:
+          SOURCES: ${{ matrix.sources_csv }}
+          USE_FULLSCRAPE: ${{ needs.plan.outputs.use_fullscrape }}
+        run: |
+          set -euo pipefail
+          echo "Shard: ${{ matrix.name }}"
+          echo "Sources: ${SOURCES}"
+          ARGS=()
+          ARGS+=(--fullscrape)
+          ARGS+=(--concurrency 8)  # Use advanced parallel URLs within shard
+          read -r -a SRC_ARRAY <<< "${SOURCES}"
+          ARGS+=("${SRC_ARRAY[@]}")
+          python main_advanced.py scrape "${ARGS[@]}"
+
+      - name: Stage shard output
+        env:
+          SOURCES: ${{ matrix.sources_csv }}
+        run: |
+          set -euo pipefail
+          mkdir -p shard-data
+          read -r -a SRC_ARRAY <<< "${SOURCES}"
+          for src in "${SRC_ARRAY[@]}"; do
+            if [ -d "data/${src}" ]; then
+              cp -R "data/${src}" "shard-data/${src}"
+            fi
+          done
+
+      - name: Upload shard artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: shard-${{ matrix.name }}
+          path: shard-data/
+          retention-days: 7
+
+  merge-and-commit:
+    needs: [plan, scrape-shards]
+    if: needs.plan.outputs.shard_count != '0'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30  # Fast merge
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Download shard artifacts
+        uses: actions/download-artifact@v4
+        with:
+          pattern: shard-*
+          merge-multiple: true
+          path: shard-data/
+
+      - name: Merge shard outputs
+        run: |
+          set -euo pipefail
+          mkdir -p data
+          for src_dir in shard-data/*; do
+            [ -d "${src_dir}" ] || continue
+            src="$(basename "${src_dir}")"
+            rm -rf "data/${src}"
+            cp -R "${src_dir}" "data/${src}"
+          done
+
+      - name: Set up Python (merge)
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: 'pip'
+
+      - name: Install pipeline deps
+        run: |
+          pip install -e .
+          pip install curl_cffi cloudscraper beautifulsoup4 orjson
+
+      - name: Show metrics summary
+        run: |
+          if [ -f data/metrics.json ]; then
+            python - <<'PY'
+            import json
+            m = json.load(open('data/metrics.json'))
+            print(f"Total drugs: {m.get('total_drugs', 0)}")
+            print(f"Total errors: {m.get('total_errors', 0)}")
+            print(f"Scrapers run: {len(m.get('scrapers', []))}")
+            for s in m.get('scrapers', []):
+                print(f"  {s['scraper']}: {s['drugs_saved']} drugs, {s['duration_seconds']:.1f}s")
+            PY
+          fi
+
+      - name: Post-process (normalize + merge + build DB)
+        run: |
+          python main_advanced.py post-process --data-dir data
+
+      - name: Rebuild checksums
+        run: |
+          python - <<'PY'
+          import hashlib, json
+          from pathlib import Path
+          data_dir = Path('data')
+          checksums = {}
+          for drugs_file in sorted(data_dir.glob('*/drugs.json')):
+              checksums[drugs_file.parent.name] = hashlib.sha256(
+                  drugs_file.read_bytes()
+              ).hexdigest()
+          (data_dir / 'checksums.json').write_text(
+              json.dumps(checksums, indent=2) + '\n',
+              encoding='utf-8',
+          )
+          print(f'Wrote {len(checksums)} checksums')
+          PY
+
+      - name: Commit DB and merged JSON
+        run: |
+          git add -f data/mediscrape.db data/merged_drugs.json data/checksums.json
+          git diff --cached --quiet || git commit --amend --no-edit
+
+      - name: Check for changes
+        id: changes
+        run: |
+          git add -f data/
+          if git diff --cached --quiet; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Commit and push
+        if: steps.changes.outputs.changed == 'true'
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          TIMESTAMP=$(date -u +"%Y-%m-%d %H:%M UTC")
+          git commit -m "data: advanced sharded scrape refresh ($TIMESTAMP)"
+          git pull --rebase
+          git push
+
+      - name: Upload merged data artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: drug-data-${{ github.run_number }}
+          path: |
+            data/
+            !data/**/*.db-swal
+          retention-days: 30
+
+      - name: Upload database
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mediscrape-db-${{ github.run_number }}
+          path: data/mediscrape.db
+
+      - name: Upload metrics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: metrics-${{ github.run_number }}
+          path: data/metrics.json
+          retention-days: 30

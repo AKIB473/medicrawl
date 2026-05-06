@@ -23,7 +23,7 @@ from typing import AsyncIterator
 import httpx
 import orjson
 from models.drug import Drug, Manufacturer, DrugPrice
-from scrapers.base import BaseScrapingScraper
+from scrapers.base_advanced import BaseAdvancedScraper
 
 logger = logging.getLogger(__name__)
 
@@ -48,7 +48,7 @@ _HEADERS = {
 }
 
 
-class AroggaScraper(BaseScrapingScraper):
+class AroggaScraper(BaseAdvancedScraper):
     name = "arogga"
     base_url = "https://www.arogga.com"
     rate_limit = 0.5
@@ -72,13 +72,20 @@ class AroggaScraper(BaseScrapingScraper):
             urls = await self._get_product_urls_from_listing()
             logger.info(f"Arogga: found {len(urls)} product URLs from listing")
 
-        for url in urls:
+        url_list = self.filter_checkpoint(list(urls))
+
+        async def _process_url(url: str) -> Drug | None:
             try:
                 drug = await self._scrape_product_page(url)
                 if drug and self._is_medicine(drug):
-                    yield drug
+                    return drug
             except Exception as e:
                 logger.warning(f"Arogga: error scraping {url}: {e}")
+            return None
+
+        async for drug in self.concurrent_iter(url_list, _process_url):
+            if drug:
+                yield drug
 
     # ------------------------------------------------------------------ #
     # Strategy 1: REST API                                                 #

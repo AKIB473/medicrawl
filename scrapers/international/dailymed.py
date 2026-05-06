@@ -11,14 +11,14 @@ import logging
 from typing import AsyncIterator
 
 from models.drug import Drug, Manufacturer
-from scrapers.base import BaseAPIScraper
+from scrapers.base_advanced import BaseAdvancedAPIScraper
 
 logger = logging.getLogger(__name__)
 
 BASE = "https://dailymed.nlm.nih.gov/dailymed/services/v2"
 
 
-class DailyMedScraper(BaseAPIScraper):
+class DailyMedScraper(BaseAdvancedAPIScraper):
     name = "dailymed"
     base_url = BASE
     rate_limit = 0.3
@@ -36,16 +36,23 @@ class DailyMedScraper(BaseAPIScraper):
             if not spls:
                 break
 
-            for spl in spls:
+            async def _process_spl(spl) -> Drug | None:
                 set_id = spl.get("setid")
                 if not set_id:
-                    continue
+                    return None
+                expected_url = f"https://dailymed.nlm.nih.gov/dailymed/drugInfo.cfm?setid={set_id}"
+                if self.checkpoint_manager and self.checkpoint_manager.is_url_completed(self.name, expected_url):
+                    return None
                 try:
                     drug = await self._fetch_spl_detail(set_id, spl)
-                    if drug:
-                        yield drug
+                    return drug
                 except Exception as e:
                     logger.warning(f"DailyMed: error fetching {set_id}: {e}")
+                    return None
+
+            async for drug in self.concurrent_iter(spls, _process_spl):
+                if drug:
+                    yield drug
 
             metadata = data.get("metadata", {})
             total_pages = metadata.get("total_pages", 0)

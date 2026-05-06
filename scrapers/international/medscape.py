@@ -14,12 +14,12 @@ from typing import AsyncIterator
 import orjson
 
 from models.drug import Drug
-from scrapers.base import BaseScrapingScraper
+from scrapers.base_advanced import BaseAdvancedScraper
 
 logger = logging.getLogger(__name__)
 
 
-class MedscapeScraper(BaseScrapingScraper):
+class MedscapeScraper(BaseAdvancedScraper):
     name = "medscape"
     base_url = "https://reference.medscape.com"
     rate_limit = 0.75
@@ -45,18 +45,24 @@ class MedscapeScraper(BaseScrapingScraper):
         sorted_urls = sorted(drug_urls)
         logger.info(f"Medscape: found {len(sorted_urls)} unique drug URLs")
 
+        sorted_urls = self.filter_checkpoint(sorted_urls)
+
         emitted = 0
-        for url in sorted_urls:
-            if self.max_drugs and emitted >= self.max_drugs:
-                break
+
+        async def _process_url(url: str) -> Drug | None:
             try:
                 drug = await self._scrape_drug_page(url)
-                if not drug:
-                    continue
-                emitted += 1
-                yield drug
+                return drug
             except Exception as e:
                 logger.warning(f"Medscape: failed {url}: {e}")
+                return None
+
+        async for drug in self.concurrent_iter(sorted_urls, _process_url):
+            if drug:
+                emitted += 1
+                if self.max_drugs and emitted >= self.max_drugs:
+                    break
+                yield drug
 
     async def _get_category_urls(self) -> list[str]:
         page = await self.fetch_page(f"{self.base_url}/drugs")

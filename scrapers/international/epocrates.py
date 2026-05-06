@@ -16,7 +16,7 @@ from typing import AsyncIterator
 import orjson
 
 from models.drug import Drug
-from scrapers.base import BaseAPIScraper
+from scrapers.base_advanced import BaseAdvancedAPIScraper
 
 logger = logging.getLogger(__name__)
 
@@ -27,7 +27,7 @@ CARD_URL = "https://www.epocrates.com/online/v2/card/drug"
 HOME_URL = "https://www.epocrates.com/online/drugs"
 
 
-class EpocratesScraper(BaseAPIScraper):
+class EpocratesScraper(BaseAdvancedAPIScraper):
     name = "epocrates"
     base_url = "https://www.epocrates.com"
     rate_limit = 0.15
@@ -55,26 +55,25 @@ class EpocratesScraper(BaseAPIScraper):
         items = catalog.get("data", {}).get("drugs", [])
         logger.info(f"Epocrates: catalog returned {len(items)} drugs")
 
-        emitted = 0
-        for item in items:
-            if self.max_drugs and emitted >= self.max_drugs:
-                break
+        items = items[:self.max_drugs] if self.max_drugs else items
 
+        async def _process_item(item) -> Drug | None:
             drug_id = item.get("id")
             if drug_id is None:
-                continue
-
+                return None
+            # Checkpoint via expected source URL
+            expected_url = f"https://www.epocrates.com/drug/{drug_id}"
+            if self.checkpoint_manager and self.checkpoint_manager.is_url_completed(self.name, expected_url):
+                return None
             try:
                 card = await self._safe_get_json(CARD_URL, params={"drugId": drug_id})
             except Exception as e:
                 logger.warning(f"Epocrates: card fetch failed for {drug_id}: {e}")
                 card = {}
-
             brands = await self._safe_get_json_list(
                 BRANDS_URL,
                 params={"drugId": drug_id, "includeParent": "true"},
             )
-
             monograph_link = card.get("monographLink")
             sections = {}
             monograph_html = ""
@@ -83,16 +82,11 @@ class EpocratesScraper(BaseAPIScraper):
                 monograph_html = await self._safe_get_text(monograph_url)
                 if monograph_html:
                     sections = _extract_sections_from_h2(monograph_html)
-
             drug = self._build_drug(item=item, card=card, sections=sections, brands=brands)
             if not drug:
-                continue
-            emitted += 1
-
+                return None
             if class_map.get(str(drug_id)):
                 drug.categories = sorted(class_map[str(drug_id)])
-
-            # Union-style source payload retention
             drug.extra["catalog_item"] = item
             drug.extra["card"] = card
             drug.extra["brands"] = brands
@@ -100,8 +94,13 @@ class EpocratesScraper(BaseAPIScraper):
                 drug.extra["monograph_html_sample"] = monograph_html[:2000]
             drug.extra["sections"] = sections
             drug.extra["parent_classes"] = sorted(class_map.get(str(drug_id), set()))
+            return drug
 
-            yield drug
+        emitted = 0
+        async for drug in self.concurrent_iter(items, _process_item):
+            if drug:
+                emitted += 1
+                yield drug
 
     async def _fetch_parent_classes(self) -> list[dict]:
         try:

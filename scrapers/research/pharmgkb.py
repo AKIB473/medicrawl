@@ -11,7 +11,7 @@ import logging
 from typing import AsyncIterator
 
 from models.drug import Drug
-from scrapers.base import BaseAPIScraper
+from scrapers.base_advanced import BaseAdvancedAPIScraper
 
 logger = logging.getLogger(__name__)
 
@@ -19,7 +19,7 @@ logger = logging.getLogger(__name__)
 BASE = "https://api.pharmgkb.org/v1/data"
 
 
-class PharmGKBScraper(BaseAPIScraper):
+class PharmGKBScraper(BaseAdvancedAPIScraper):
     name = "pharmgkb"
     base_url = BASE
     rate_limit = 0.5
@@ -44,8 +44,15 @@ class PharmGKBScraper(BaseAPIScraper):
         items = data.get("data", [])
         logger.info(f"PharmGKB: {len(items)} chemicals")
 
-        for item in items:
-            drug = self._parse_chemical(item)
+        async def _process_item(item) -> Drug | None:
+            item_id = item.get("id")
+            if not item_id:
+                return None
+            if self.checkpoint_manager and self.checkpoint_manager.is_url_completed(self.name, f"{BASE}/chemical/{item_id}"):
+                return None
+            return self._parse_chemical(item)
+
+        async for drug in self.concurrent_iter(items, _process_item):
             if drug:
                 yield drug
 

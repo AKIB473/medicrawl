@@ -22,7 +22,7 @@ import re
 from typing import AsyncIterator
 
 from models.drug import Drug
-from scrapers.base import BaseScrapingScraper
+from scrapers.base_advanced import BaseAdvancedScraper
 
 logger = logging.getLogger(__name__)
 
@@ -30,7 +30,7 @@ _SITE_BASE = "https://www.dimsbd.com"
 _LETTERS = ["numeric"] + list("abcdefghijklmnopqrstuvwxyz")
 
 
-class DIMSScraper(BaseScrapingScraper):
+class DIMSScraper(BaseAdvancedScraper):
     name = "dims"
     base_url = _SITE_BASE
     rate_limit = 0.5
@@ -56,16 +56,23 @@ class DIMSScraper(BaseScrapingScraper):
                 try:
                     generics = await self._get_generics_for_letter(page, letter)
                     logger.info(f"DIMS: letter={letter!r} → {len(generics)} generics")
-                    for name in generics:
-                        yield Drug(
+                    async def _process_name(name: str) -> Drug | None:
+                        chk_url = f"{_SITE_BASE}/generics/{letter}/{name}"
+                        if self.checkpoint_manager and self.checkpoint_manager.is_url_completed(self.name, chk_url):
+                            return None
+                        return Drug(
                             source="dims",
-                            source_url=f"{_SITE_BASE}/generics/{letter}",
+                            source_url=chk_url,
                             generic_name=name,
                             extra={
                                 "dims_note": "Generic name only; brand/price data requires DIMS Premium subscription",
                                 "letter_page": letter,
                             },
                         )
+
+                    async for drug in self.concurrent_iter(generics, _process_name):
+                        if drug:
+                            yield drug
                     await asyncio.sleep(self.rate_limit)
                 except Exception as e:
                     logger.warning(f"DIMS: error on letter {letter!r}: {e}")

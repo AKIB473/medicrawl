@@ -7,12 +7,12 @@ import re
 from typing import AsyncIterator
 
 from models.drug import Drug, Manufacturer, DrugPrice
-from scrapers.base import BaseScrapingScraper
+from scrapers.base_advanced import BaseAdvancedScraper
 
 logger = logging.getLogger(__name__)
 
 
-class LazzPharmaScraper(BaseScrapingScraper):
+class LazzPharmaScraper(BaseAdvancedScraper):
     name = "lazzpharma"
     base_url = "https://www.lazzpharma.com"
     rate_limit = 1.0
@@ -30,13 +30,20 @@ class LazzPharmaScraper(BaseScrapingScraper):
         urls = await self._get_drug_urls()
         logger.info(f"LazzPharma: found {len(urls)} drug URLs")
 
-        for url in urls:
+        url_list = self.filter_checkpoint(list(urls))
+
+        async def _process_url(url: str) -> Drug | None:
             try:
                 drug = await self._scrape_drug_page(url)
                 if drug:
-                    yield drug
+                    return drug
             except Exception as e:
                 logger.warning(f"LazzPharma: error scraping {url}: {e}")
+            return None
+
+        async for drug in self.concurrent_iter(url_list, _process_url):
+            if drug:
+                yield drug
 
     async def _try_api(self) -> list[Drug]:
         drugs = []

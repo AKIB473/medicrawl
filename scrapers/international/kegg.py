@@ -7,14 +7,14 @@ import re
 from typing import AsyncIterator
 
 from models.drug import Drug
-from scrapers.base import BaseAPIScraper
+from scrapers.base_advanced import BaseAdvancedAPIScraper
 
 logger = logging.getLogger(__name__)
 
 BASE = "https://rest.kegg.jp"
 
 
-class KEGGScraper(BaseAPIScraper):
+class KEGGScraper(BaseAdvancedAPIScraper):
     name = "kegg"
     base_url = BASE
     rate_limit = 0.35  # Be polite to KEGG
@@ -31,13 +31,23 @@ class KEGGScraper(BaseAPIScraper):
 
         logger.info(f"KEGG: found {len(entries)} drug entries")
 
-        for drug_id in entries:
+        entries = list(dict.fromkeys(entries))  # deduplicate
+
+        async def _process_id(drug_id: str) -> Drug | None:
+            if self.checkpoint_manager:
+                expected_url = f"https://www.kegg.jp/entry/{drug_id}"
+                if self.checkpoint_manager.is_url_completed(self.name, expected_url):
+                    return None
             try:
                 drug = await self._fetch_drug(drug_id)
-                if drug:
-                    yield drug
+                return drug
             except Exception as e:
                 logger.warning(f"KEGG: error fetching {drug_id}: {e}")
+                return None
+
+        async for drug in self.concurrent_iter(entries, _process_id):
+            if drug:
+                yield drug
 
     async def _fetch_drug(self, drug_id: str) -> Drug | None:
         text = await self.api_get_text(f"{BASE}/get/{drug_id}")

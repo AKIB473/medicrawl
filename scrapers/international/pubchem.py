@@ -6,14 +6,14 @@ import logging
 from typing import AsyncIterator
 
 from models.drug import Drug
-from scrapers.base import BaseAPIScraper
+from scrapers.base_advanced import BaseAdvancedAPIScraper
 
 logger = logging.getLogger(__name__)
 
 BASE = "https://pubchem.ncbi.nlm.nih.gov/rest/pug"
 
 
-class PubChemScraper(BaseAPIScraper):
+class PubChemScraper(BaseAdvancedAPIScraper):
     name = "pubchem"
     base_url = BASE
     rate_limit = 0.25  # PubChem: 5 requests/second
@@ -25,14 +25,20 @@ class PubChemScraper(BaseAPIScraper):
 
         # Process in batches of 50
         batch_size = 50
-        for i in range(0, len(cids), batch_size):
-            batch = cids[i:i + batch_size]
+        batch_size = 50
+        batches = [cids[i:i + batch_size] for i in range(0, len(cids), batch_size)]
+
+        async def _process_batch(batch: list[int]) -> list[Drug]:
             try:
                 drugs = await self._fetch_batch(batch)
-                for drug in drugs:
-                    yield drug
+                return drugs
             except Exception as e:
-                logger.warning(f"PubChem: batch error at {i}: {e}")
+                logger.warning(f"PubChem: batch error: {e}")
+                return []
+
+        async for drugs in self.concurrent_iter(batches, _process_batch):
+            for drug in drugs:
+                yield drug
 
     async def _get_drug_cids(self) -> list[int]:
         """Get CIDs of known drugs via PubChem classification."""

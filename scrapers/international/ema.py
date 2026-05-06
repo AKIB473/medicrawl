@@ -12,7 +12,7 @@ import logging
 from typing import AsyncIterator
 
 from models.drug import Drug, Manufacturer
-from scrapers.base import BaseAPIScraper
+from scrapers.base_advanced import BaseAdvancedAPIScraper
 
 logger = logging.getLogger(__name__)
 
@@ -23,7 +23,7 @@ JSON_URLS = [
 ]
 
 
-class EMAScraper(BaseAPIScraper):
+class EMAScraper(BaseAdvancedAPIScraper):
     name = "ema"
     base_url = "https://www.ema.europa.eu"
     rate_limit = 1.0
@@ -45,8 +45,14 @@ class EMAScraper(BaseAPIScraper):
 
                 if medicines:
                     logger.info(f"EMA: got {len(medicines)} medicines from JSON")
-                    for med in medicines:
-                        drug = self._parse_medicine(med)
+
+                    async def _process_med(med) -> Drug | None:
+                        med_id = med.get("id") or med.get("identifier") or str(hash(str(med)))
+                        if self.checkpoint_manager and self.checkpoint_manager.is_url_completed(self.name, f"{json_url}#{med_id}"):
+                            return None
+                        return self._parse_medicine(med)
+
+                    async for drug in self.concurrent_iter(medicines, _process_med):
                         if drug:
                             yield drug
                     return
@@ -64,14 +70,19 @@ class EMAScraper(BaseAPIScraper):
                 text = await self.api_get_text(csv_url)
                 if text and len(text) > 100:
                     reader = csv.DictReader(io.StringIO(text))
-                    count = 0
-                    for row in reader:
-                        drug = self._parse_csv_row(row)
+                    rows = list(reader)
+
+                    async def _process_row(row) -> Drug | None:
+                        row_id = row.get("Product Name") or row.get("medicine_name") or str(hash(str(row)))
+                        if self.checkpoint_manager and self.checkpoint_manager.is_url_completed(self.name, f"{csv_url}#{row_id}"):
+                            return None
+                        return self._parse_csv_row(row)
+
+                    async for drug in self.concurrent_iter(rows, _process_row):
                         if drug:
                             yield drug
-                            count += 1
-                    if count > 0:
-                        logger.info(f"EMA: got {count} medicines from CSV")
+                    if rows:
+                        logger.info(f"EMA: got {len(rows)} medicines from CSV")
                         return
             except Exception as e:
                 logger.warning(f"EMA: CSV URL failed ({csv_url}): {e}")

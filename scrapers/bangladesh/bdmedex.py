@@ -23,7 +23,7 @@ from typing import AsyncIterator
 
 import httpx
 from models.drug import Drug, Manufacturer, DrugPrice
-from scrapers.base import BaseScrapingScraper
+from scrapers.base_advanced import BaseAdvancedScraper
 
 logger = logging.getLogger(__name__)
 
@@ -50,7 +50,7 @@ _FORMS = [
 ]
 
 
-class BDMedExScraper(BaseScrapingScraper):
+class BDMedExScraper(BaseAdvancedScraper):
     name = "bdmedex"
     base_url = "https://bdmedex.com"
     rate_limit = 1.0
@@ -61,20 +61,24 @@ class BDMedExScraper(BaseScrapingScraper):
         urls = await self._collect_urls()
         logger.info(f"BDMedEx: found {len(urls)} drug page URLs")
 
-        # Step 2: Scrape each drug page via Playwright (JS render required)
-        for url in urls:
+        # Filter already completed URLs via checkpoint
+        urls = self.filter_checkpoint(urls)
+
+        async def _process(url: str) -> Drug | None:
+            await self.throttle()
             try:
                 drug = await self._scrape_with_playwright(url)
                 if drug:
-                    yield drug
-                else:
-                    # Try bypass fallback
-                    drug = await self._scrape_page(url)
-                    if drug:
-                        yield drug
+                    return drug
+                drug = await self._scrape_page(url)
+                return drug
             except Exception as e:
                 logger.warning(f"BDMedEx: error {url}: {e}")
-            await asyncio.sleep(self.rate_limit)
+                return None
+
+        async for drug in self.concurrent_iter(urls, _process):
+            if drug:
+                yield drug
 
     async def _collect_urls(self) -> list[str]:
         """Collect all brand and generic page URLs from listing pages."""

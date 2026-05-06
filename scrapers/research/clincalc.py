@@ -7,12 +7,12 @@ import re
 from typing import AsyncIterator
 
 from models.drug import Drug
-from scrapers.base import BaseScrapingScraper
+from scrapers.base_advanced import BaseAdvancedScraper
 
 logger = logging.getLogger(__name__)
 
 
-class ClinCalcScraper(BaseScrapingScraper):
+class ClinCalcScraper(BaseAdvancedScraper):
     name = "clincalc"
     base_url = "https://clincalc.com"
     rate_limit = 1.5
@@ -69,6 +69,8 @@ class ClinCalcScraper(BaseScrapingScraper):
 
         data_rows = table_el.find_all("tr")[1:] if header_row else table_el.find_all("tr")
 
+        # Collect row items for concurrent processing
+        row_items = []
         for row in data_rows:
             soup_cells = row.find_all("td")
             if len(soup_cells) < 3:
@@ -90,36 +92,51 @@ class ClinCalcScraper(BaseScrapingScraper):
             if not drug_name:
                 continue
 
-            # Try to scrape detail page for more info
+            row_items.append((row, data, detail_url, drug_name))
+
+        async def _process_row(item) -> Drug | None:
+            _row, data, detail_url, drug_name = item
+            # Checkpoint using drug name + detail url
+            checkpoint_key = detail_url or drug_name
+            if self.checkpoint_manager and self.checkpoint_manager.is_url_completed(self.name, f"clincalc:{checkpoint_key}"):
+                return None
+
             detail_data = {}
             if detail_url:
                 try:
                     detail_data = await self._scrape_detail(detail_url)
-                except Exception:
-                    pass
+                except Exception as e:
+                    logger.debug(f"ClinCalc: detail fetch failed for {detail_url}: {e}")
 
             rank_text = data.get("rank", data.get("#", ""))
             prescriptions = data.get("total prescriptions", data.get("prescriptions", ""))
 
-            yield Drug(
-                source="clincalc",
-                source_url=detail_url or f"{self.base_url}/DrugStats/Top300Drugs.aspx",
-                brand_name=drug_name,
-                generic_name=detail_data.get("generic_name", ""),
-                drug_class=detail_data.get("drug_class", ""),
-                categories=[detail_data["drug_class"]] if detail_data.get("drug_class") else [],
-                extra={
-                    "jsonld": jsonld,
-                    "rank": _int(rank_text),
-                    "total_prescriptions": prescriptions,
-                    "total_patients": data.get("total patients", ""),
-                    "change": data.get("change", data.get("% change", "")),
-                    "clinical_use": detail_data.get("clinical_use", ""),
-                    "prescription_trend": detail_data.get("trend", ""),
-                    **{k: v for k, v in detail_data.items()},
-                },
-            )
+            try:
+                return Drug(
+                    source="clincalc",
+                    source_url=detail_url or f"{self.base_url}/DrugStats/Top300Drugs.aspx",
+                    brand_name=drug_name,
+                    generic_name=detail_data.get("generic_name", ""),
+                    drug_class=detail_data.get("drug_class", ""),
+                    categories=[detail_data["drug_class"]] if detail_data.get("drug_class") else [],
+                    extra={
+                        "jsonld": jsonld,
+                        "rank": _int(rank_text),
+                        "total_prescriptions": prescriptions,
+                        "total_patients": data.get("total patients", ""),
+                        "change": data.get("change", data.get("% change", "")),
+                        "clinical_use": detail_data.get("clinical_use", ""),
+                        "prescription_trend": detail_data.get("trend", ""),
+                        **{k: v for k, v in detail_data.items()},
+                    },
+                )
+            except Exception as e:
+                logger.warning(f"ClinCalc: error building Drug for {drug_name}: {e}")
+                return None
 
+        async for drug in self.concurrent_iter(row_items, _process_row):
+            if drug:
+                yield drug
     async def _scrape_detail(self, url: str) -> dict:
         import re as _re
         page = await self.fetch_page(url)

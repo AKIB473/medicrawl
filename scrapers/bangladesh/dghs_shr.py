@@ -7,18 +7,19 @@ Sources:
 
 from __future__ import annotations
 
+import asyncio
 import logging
 import os
 import re
 from typing import AsyncIterator
 
 from models.drug import Drug
-from scrapers.base import BaseAPIScraper
+from scrapers.base_advanced import BaseAdvancedAPIScraper
 
 logger = logging.getLogger(__name__)
 
 
-class DGHSSHRScraper(BaseAPIScraper):
+class DGHSSHRScraper(BaseAdvancedAPIScraper):
     name = "dghs_shr"
     base_url = "https://fhir.dghs.gov.bd"
     rate_limit = 0.25
@@ -45,7 +46,14 @@ class DGHSSHRScraper(BaseAPIScraper):
         med_request_profile = await self._safe_api_get(f"{self.core_base}/StructureDefinition-bd-medication-request.json")
 
         seen_ids: set[str] = set()
-        for concept in (code_system or {}).get("concept", []):
+        concepts = (code_system or {}).get("concept", [])
+        seen_lock = asyncio.Lock()
+
+        async def _process_concept(concept) -> Drug | None:
+            code = str(concept.get("code", "")).strip()
+            concept_url = f"{self.core_base}/CodeSystem-bd-medication-code.json#{code}"
+            if self.checkpoint_manager and self.checkpoint_manager.is_url_completed(self.name, concept_url):
+                return None
             drug = self._parse_codesystem_concept(
                 concept=concept,
                 code_system=code_system or {},
@@ -54,13 +62,20 @@ class DGHSSHRScraper(BaseAPIScraper):
                 med_request_profile=med_request_profile or {},
             )
             if not drug:
-                continue
+                return None
+            # Override source_url to be concept-specific for checkpointing
+            drug.source_url = concept_url
             source_id = drug.source_id or ""
-            if source_id and source_id in seen_ids:
-                continue
-            if source_id:
-                seen_ids.add(source_id)
-            yield drug
+            async with seen_lock:
+                if source_id and source_id in seen_ids:
+                    return None
+                if source_id:
+                    seen_ids.add(source_id)
+            return drug
+
+        async for drug in self.concurrent_iter(concepts, _process_concept):
+            if drug:
+                yield drug
 
         if not self._has_live_token:
             logger.info(

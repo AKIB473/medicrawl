@@ -113,6 +113,122 @@ cat data/metrics.json | python -m json.tool | less
 
 ---
 
+### 📈 Animated Speed Comparison
+
+<div align="center">
+
+<!-- Animated bar chart comparing Original vs Advanced -->
+<svg width="720" height="280" viewBox="0 0 720 280" xmlns="http://www.w3.org/2000/svg" aria-label="Performance comparison bar chart">
+  <defs>
+    <linearGradient id="origGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#f85149"/>
+      <stop offset="100%" stop-color="#da3633"/>
+    </linearGradient>
+    <linearGradient id="advGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#2ea043"/>
+      <stop offset="100%" stop-color="#238636"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Wall time bars -->
+  <text x="60" y="40" fill="#c9d1d9" font-family="sans-serif" font-size="14">Wall‑time (all sources)</text>
+  <rect x="260" y="20" width="0" height="22" fill="url(#origGrad)" rx="4">
+    <animate attributeName="width" from="0" to="320" dur="1.2s" fill="freeze" calcMode="spline" keySplines="0.25 0.1 0.25 1"/>
+    <animate attributeName="opacity" values="0.6;1" dur="0.5s" fill="freeze"/>
+  </rect>
+  <text x="600" y="38" fill="#f85149" font-family="sans-serif" font-size="12">6+ hrs</text>
+  <rect x="260" y="64" width="0" height="22" fill="url(#advGrad)" rx="4">
+    <animate attributeName="width" from="0" to="320" dur="1.2s" begin="0.3s" fill="freeze" calcMode="spline" keySplines="0.25 0.1 0.25 1"/>
+    <animate attributeName="opacity" values="0.6;1" dur="0.5s" begin="0.3s" fill="freeze"/>
+  </rect>
+  <text x="600" y="82" fill="#2ea043" font-family="sans-serif" font-size="12">~25 min</text>
+
+  <!-- Throughput bars -->
+  <text x="60" y="120" fill="#c9d1d9" font-family="sans-serif" font-size="14">Requests / sec</text>
+  <rect x="260" y="100" width="0" height="22" fill="url(#origGrad)" rx="4">
+    <animate attributeName="width" from="0" to="80" dur="1.2s" begin="0.6s" fill="freeze" calcMode="spline" keySplines="0.25 0.1 0.25 1"/>
+  </rect>
+  <text x="360" y="118" fill="#f85149" font-family="sans-serif" font-size="12">~10</text>
+  <rect x="260" y="144" width="0" height="22" fill="url(#advGrad)" rx="4">
+    <animate attributeName="width" from="0" to="320" dur="1.2s" begin="0.9s" fill="freeze" calcMode="spline" keySplines="0.25 0.1 0.25 1"/>
+  </rect>
+  <text x="600" y="162" fill="#2ea043" font-family="sans-serif" font-size="12">~80 (8×)</text>
+
+  <!-- Cache hit bars -->
+  <text x="60" y="200" fill="#c9d1d9" font-family="sans-serif" font-size="14">Cache hit on resume</text>
+  <rect x="260" y="180" width="0" height="22" fill="url(#origGrad)" rx="4">
+    <animate attributeName="width" from="0" to="0" dur="1s" fill="freeze"/>
+  </rect>
+  <text x="360" y="198" fill="#8b949e" font-family="sans-serif" font-size="12">N/A</text>
+  <rect x="260" y="224" width="0" height="22" fill="url(#advGrad)" rx="4">
+    <animate attributeName="width" from="0" to="240" dur="1.2s" begin="1.2s" fill="freeze" calcMode="spline" keySplines="0.25 0.1 0.25 1"/>
+  </rect>
+  <text x="520" y="242" fill="#2ea043" font-family="sans-serif" font-size="12">~80%</text>
+
+  <!-- Pulsing performance text -->
+  <text x="360" y="270" text-anchor="middle" fill="#58a6ff" font-family="sans-serif" font-size="14" opacity="0">
+    <tspan>⚡ 15× faster overall</tspan>
+    <animate attributeName="opacity" values="0;1;0" dur="2s" repeatCount="indefinite" begin="2s"/>
+  </text>
+</svg>
+
+</div>
+
+### 🛠️ Pipeline Architecture
+
+<div align="center">
+
+<!-- Animated data flow through pipeline stages -->
+<svg width="720" height="160" viewBox="0 0 720 160" xmlns="http://www.w3.org/2000/svg" aria-label="Pipeline: Sources → Scrapers → Checkpoint/Cache → Database">
+  <defs>
+    <linearGradient id="stageGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#58a6ff"/>
+      <stop offset="100%" stop-color="#1f6feb"/>
+    </linearGradient>
+    <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="3" result="blur"/>
+      <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+  </defs>
+
+  <!-- Stage boxes -->
+  <rect x="40" y="50" width="140" height="60" rx="10" fill="url(#stageGrad)" filter="url(#glow)">
+    <animate attributeName="y" values="50;45;50" dur="2s" repeatCount="indefinite"/>
+  </rect>
+  <text x="110" y="85" text-anchor="middle" fill="white" font-family="sans-serif" font-size="14" font-weight="600">40+ Sources</text>
+
+  <rect x="220" y="50" width="140" height="60" rx="10" fill="url(#stageGrad)" filter="url(#glow)">
+    <animate attributeName="y" values="50;45;50" dur="2s" begin="0.5s" repeatCount="indefinite"/>
+  </rect>
+  <text x="290" y="85" text-anchor="middle" fill="white" font-family="sans-serif" font-size="14" font-weight="600">Parallel<br/>Scrapers</text>
+
+  <rect x="400" y="50" width="140" height="60" rx="10" fill="url(#stageGrad)" filter="url(#glow)">
+    <animate attributeName="y" values="50;45;50" dur="2s" begin="1s" repeatCount="indefinite"/>
+  </rect>
+  <text x="470" y="75" text-anchor="middle" fill="white" font-family="sans-serif" font-size="13" font-weight="600">Checkpoint</text>
+  <text x="470" y="95" text-anchor="middle" fill="white" font-family="sans-serif" font-size="13" font-weight="600">+ Cache</text>
+
+  <rect x="560" y="50" width="120" height="60" rx="10" fill="url(#stageGrad)" filter="url(#glow)">
+    <animate attributeName="y" values="50;45;50" dur="2s" begin="1.5s" repeatCount="indefinite"/>
+  </rect>
+  <text x="620" y="85" text-anchor="middle" fill="white" font-family="sans-serif" font-size="13" font-weight="600">Merged<br/>DB</text>
+
+  <!-- Animated arrows -->
+  <g fill="none" stroke="#2ea043" stroke-width="3" stroke-linecap="round">
+    <line x1="180" y1="80" x2="210" y2="80">
+      <animate attributeName="stroke-dasharray" values="0 20;20 0" dur="1.5s" repeatCount="indefinite" begin="0.2s"/>
+    </line>
+    <line x1="360" y1="80" x2="390" y2="80">
+      <animate attributeName="stroke-dasharray" values="0 20;20 0" dur="1.5s" repeatCount="indefinite" begin="0.7s"/>
+    </line>
+    <line x1="540" y1="80" x2="550" y2="80">
+      <animate attributeName="stroke-dasharray" values="0 20;20 0" dur="1.5s" repeatCount="indefinite" begin="1.2s"/>
+    </line>
+  </g>
+</svg>
+
+</div>
+
 ## 🔧 How It Works
 
 ### 1. Bounded Concurrency (`concurrent_iter`)
@@ -271,7 +387,7 @@ We ❤️ PRs! Please read [CONTRIBUTING.md](CONTRIBUTING.md) first. For advance
 
 <div align="center">
 
-**Built with ❤️ for the healthcare community**
+**Built with <svg width='24' height='24' viewBox='0 0 24 24' xmlns='http://www.w3.org/2000/svg' style='vertical-align:middle;display:inline-block'><path fill='#e25555' d='M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z'><animate attributeName='scale' values='1;1.2;1' dur='1s' repeatCount='indefinite'/></path></svg> for the healthcare community**
 
 Made by **AKIBUZZAMAN AKIB** (https://github.com/AKIB473)
 

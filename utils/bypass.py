@@ -119,7 +119,7 @@ async def _fetch_curl(
     url: str,
     headers: dict | None = None,
     timeout: int = 30,
-    impersonate: str | None = None,
+    impersonate: str | None = None,  # type: ignore[arg-type]
 ) -> str | None:
     """Fetch with curl_cffi TLS impersonation — bypasses CF Bot Management."""
     if not _curl_available:
@@ -134,7 +134,7 @@ async def _fetch_curl(
                 allow_redirects=True,
             )
             if r.status_code == 200:
-                return r.text
+                return r.text  # type: ignore[no-any-return]
             if r.status_code in (403, 429, 503):
                 logger.debug(f"curl_cffi {impersonate}: {r.status_code} on {url}")
                 return None
@@ -168,7 +168,7 @@ async def _fetch_cloudscraper(url: str, headers: dict | None = None) -> str | No
             scraper.headers.update(headers)
         r = await loop.run_in_executor(None, lambda: scraper.get(url, timeout=30))
         if r.status_code == 200:
-            return r.text
+            return r.text  # type: ignore[no-any-return]
     except Exception as e:
         logger.debug(f"cloudscraper failed: {e}")
     return None
@@ -221,7 +221,7 @@ async def _fetch_playwright(url: str, wait_ms: int = 3000) -> str | None:
                     break
             html = await page.content()
             await browser.close()
-            return html
+            return html  # type: ignore[no-any-return]
     except Exception as e:
         logger.debug(f"playwright failed: {e}")
     return None
@@ -242,7 +242,7 @@ async def _fetch_httpx(url: str, headers: dict | None = None) -> str | None:
         ) as c:
             r = await c.get(url)
             if r.status_code == 200:
-                return r.text
+                return r.text  # type: ignore[no-any-return]
     except Exception as e:
         logger.debug(f"httpx fallback failed: {e}")
     return None
@@ -283,19 +283,19 @@ async def fetch_bypass(
         html = await _fetch_curl(url, hdrs, impersonate="chrome124")
         if html and len(html) > 500:
             logger.debug(f"bypass: curl_cffi chrome124 OK for {url}")
-            return html
+            return html  # type: ignore[no-any-return]
 
         # Retry with Firefox impersonation
         html = await _fetch_curl(url, hdrs, impersonate="firefox124")
         if html and len(html) > 500:
             logger.debug(f"bypass: curl_cffi firefox124 OK for {url}")
-            return html
+            return html  # type: ignore[no-any-return]
 
     # Level 2: cloudscraper
     html = await _fetch_cloudscraper(url, hdrs)
     if html and len(html) > 500:
         logger.debug(f"bypass: cloudscraper OK for {url}")
-        return html
+        return html  # type: ignore[no-any-return]
 
     # Level 3: Playwright
     if use_playwright_fallback:
@@ -303,13 +303,13 @@ async def fetch_bypass(
         html = await _fetch_playwright(url)
         if html and len(html) > 500:
             logger.debug(f"bypass: Playwright OK for {url}")
-            return html
+            return html  # type: ignore[no-any-return]
 
     # Level 4: httpx
     html = await _fetch_httpx(url, hdrs)
     if html and len(html) > 500:
         logger.debug(f"bypass: httpx fallback OK for {url}")
-        return html
+        return html  # type: ignore[no-any-return]
 
     logger.warning(f"bypass: ALL methods failed for {url}")
     return None
@@ -334,7 +334,7 @@ class BypassSession:
         base_url: str = "",
         *,
         rate_limit: float = 1.0,
-        impersonate: str | None = None,
+        impersonate: str | None = None,  # type: ignore[arg-type]
         use_playwright: bool = False,
     ):
         self.base_url = base_url.rstrip("/")
@@ -385,7 +385,7 @@ class BypassSession:
                     allow_redirects=True,
                 )
                 if r.status_code == 200 and len(r.text) > 200:
-                    return r.text
+                    return r.text  # type: ignore[no-any-return]
                 if r.status_code in (403, 503):
                     logger.debug(f"BypassSession: CF challenge on {url}, rotating impersonation")
                     # Rotate impersonation on CF challenge

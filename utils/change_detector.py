@@ -19,7 +19,7 @@ class ChangeDetector:
     def load_checksums(self) -> dict[str, str]:
         if not self.checksums_file.exists():
             return {}
-        return orjson.loads(self.checksums_file.read_bytes())
+        return orjson.loads(self.checksums_file.read_bytes())  # type: ignore[no-any-return]
 
     def save_checksums(self, checksums: dict[str, str]):
         self.checksums_file.write_bytes(

@@ -186,7 +186,7 @@ class _CachedResponse:
         self.status_code = status
         self.headers = headers
         self._body = body
-        self._text = None
+        self._text: str | None = None
         self._json = None
 
     async def aread(self) -> bytes:
@@ -196,7 +196,7 @@ class _CachedResponse:
     def text(self) -> str:
         if self._text is None:
             self._text = self._body.decode("utf-8", errors="replace")
-        return self._text
+        return self._text if self._text else ""
 
     def json(self):
         if self._json is None:

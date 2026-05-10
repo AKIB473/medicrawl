@@ -108,7 +108,6 @@ class CheckpointManager:
             return count > 0
         finally:
             conn.close()
-        return False
 
     def add_url(self, scraper_name: str, url: str):
         """Mark a URL as completed for a scraper."""
@@ -128,8 +127,7 @@ class CheckpointManager:
         conn = sqlite3.connect(str(self.db_path))
         try:
             rows = conn.execute(
-                "SELECT url_hash FROM completed_urls WHERE scraper = ?",
-                (scraper_name,)
+                "SELECT url_hash FROM completed_urls WHERE scraper = ?"
             ).fetchall()
             return set(r[0] for r in rows)
         finally:

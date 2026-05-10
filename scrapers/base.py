@@ -36,9 +36,9 @@ def _css_first(self, selector):
         return results.first if hasattr(results, 'first') else results[0]
     return None
 
-if not hasattr(Selector, 'css_first'):
+if not hasattr(Selector, 'css_first'):  # type: ignore[attr-defined]
     Selector.css_first = _css_first
-if not hasattr(ScraplingResponse, 'css_first'):
+if not hasattr(ScraplingResponse, 'css_first'):  # type: ignore[attr-defined]
     ScraplingResponse.css_first = _css_first
 
 
@@ -276,11 +276,11 @@ class BaseScrapingScraper(BaseScraper):
     def __init__(self, data_dir: Path = Path("data")):
         super().__init__(data_dir)
         if self.use_dynamic:
-            self.fetcher = DynamicFetcher()
+            self.fetcher: Fetcher | StealthyFetcher | DynamicFetcher = DynamicFetcher()
         elif self.use_stealth:
-            self.fetcher = StealthyFetcher()
+            self.fetcher: Fetcher | StealthyFetcher | DynamicFetcher = StealthyFetcher()
         else:
-            self.fetcher = Fetcher()
+            self.fetcher: Fetcher | StealthyFetcher | DynamicFetcher = Fetcher()
         self._is_stealth = self.use_stealth or self.use_dynamic
         self._bypass_session: BypassSession | None = None
 
@@ -328,7 +328,7 @@ class BaseScrapingScraper(BaseScraper):
             response = self.fetcher.get(url, **kwargs)
 
         if response.status != 200:
-            raise httpx.HTTPStatusError(
+            raise httpx.HTTPStatusError(  # type: ignore[arg-type]
                 f"HTTP {response.status}",
                 request=None,
                 response=None,
@@ -354,8 +354,8 @@ class BaseAPIScraper(BaseScraper):
         # Prefer curl_cffi for API requests too (better TLS fingerprint)
         if _curl_available:
             from curl_cffi.requests import AsyncSession as CurlAsync
-            import random
-            self._curl_session = CurlAsync(impersonate="chrome124")
+            # import random  # unused
+            self._curl_session: CurlAsync | None = CurlAsync(impersonate="chrome124")
             self._use_curl = True
         else:
             self._use_curl = False

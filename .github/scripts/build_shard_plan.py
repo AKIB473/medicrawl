@@ -80,8 +80,20 @@ print(f'Selected sources ({len(selected)}): {", ".join(selected)}', file=sys.std
 print(f'Shards to run: {len(matrix)}', file=sys.stderr)
 print(f'Fullscrape mode: {use_fullscrape}', file=sys.stderr)
 
-# Output key=value lines to stdout (captured by GITHUB_OUTPUT)
-print(f"matrix={json.dumps(matrix)}")
-print(f"shard_count={len(matrix)}")
-print(f"use_fullscrape={'true' if use_fullscrape else 'false'}")
-print(f"selected_sources={','.join(selected)}")
+# Use heredoc format for proper JSON output in GITHUB_OUTPUT
+output_file = os.environ.get('GITHUB_OUTPUT', '')
+if output_file:
+    with open(output_file, 'a', encoding='utf-8') as fh:
+        fh.write('matrix<<MATRIX_JSON\n')
+        json.dump(matrix, fh)
+        fh.write('\nMATRIX_JSON\n')
+        fh.write(f"shard_count={len(matrix)}\n")
+        fh.write(f"use_fullscrape={'true' if use_fullscrape else 'false'}\n")
+        fh.write(f"selected_sources={','.join(selected)}\n")
+else:
+    print(f"matrix<<MATRIX_JSON")
+    print(json.dumps(matrix))
+    print("MATRIX_JSON")
+    print(f"shard_count={len(matrix)}")
+    print(f"use_fullscrape={'true' if use_fullscrape else 'false'}")
+    print(f"selected_sources={','.join(selected)}")

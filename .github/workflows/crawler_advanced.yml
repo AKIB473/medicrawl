@@ -61,36 +61,11 @@ jobs:
           INPUT_SOURCES: ${{ github.event.inputs.sources || '' }}
           INPUT_CATEGORY: ${{ github.event.inputs.category || 'all'}}
           INPUT_FULLSCRAPE: ${{ github.event.inputs.fullscrape || 'false' }}
-        run: |
-          python .github/scripts/build_shard_plan.py >> "$GITHUB_OUTPUT"
-          echo "=== GITHUB_OUTPUT ==="
-          cat "$GITHUB_OUTPUT" || true
-          echo "=== END ==="
+        run: python .github/scripts/build_shard_plan.py
 
-      - name: Debug GITHUB_OUTPUT
-        if: always()
-        run: |
-          echo "--- GITHUB_OUTPUT contents after Build step ---"
-          echo "Output file path: $GITHUB_OUTPUT"
-          echo "--- Begin file ---"
-          cat "$GITHUB_OUTPUT" || true
-          echo "--- End file ---"
       - name: Verify outputs
-        if: always()
         run: |
-          echo "Step outputs check:"
-          echo "  matrix='${{ steps.plan.outputs.matrix }}'"
-          echo "  shard_count='${{ steps.plan.outputs.shard_count }}'"
-          echo "  use_fullscrape='${{ steps.plan.outputs.use_fullscrape }}'"
-          echo "  selected_sources='${{ steps.plan.outputs.selected_sources }}'"
-
-      - name: Set job outputs from plan step
-        id: set-outputs
-        run: |
-          echo "matrix=${{ steps.plan.outputs.matrix }}" >> $GITHUB_OUTPUT
-          echo "shard_count=${{ steps.plan.outputs.shard_count }}" >> $GITHUB_OUTPUT
-          echo "use_fullscrape=${{ steps.plan.outputs.use_fullscrape }}" >> $GITHUB_OUTPUT
-          echo "selected_sources=${{ steps.plan.outputs.selected_sources }}" >> $GITHUB_OUTPUT
+          echo "Plan completed successfully"
 
   scrape-shards:
     needs: plan

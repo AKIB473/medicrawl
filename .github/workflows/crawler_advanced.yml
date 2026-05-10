@@ -164,6 +164,12 @@ jobs:
               fh.write(f'shard_count={len(matrix)}\n')
           PY
 
+      - name: Debug plan outputs
+        if: always()
+        run: |
+          echo "DEBUG: matrix = '${{ steps.plan.outputs.matrix }}'"
+          echo "DEBUG: shard_count = '${{ steps.plan.outputs.shard_count }}'"
+
   scrape-shards:
     needs: plan
     if: needs.plan.outputs.shard_count != '0'

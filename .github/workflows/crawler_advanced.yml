@@ -162,6 +162,14 @@ jobs:
               fh.write(f'shard_count={len(matrix)}\n')
           PY
 
+      - name: Debug GITHUB_OUTPUT
+        if: always()
+        run: |
+          echo "--- GITHUB_OUTPUT contents after Build step ---"
+          echo "Output file path: $GITHUB_OUTPUT"
+          echo "--- Begin file ---"
+          cat "$GITHUB_OUTPUT" || true
+          echo "--- End file ---"
       - name: Verify outputs
         if: always()
         run: |

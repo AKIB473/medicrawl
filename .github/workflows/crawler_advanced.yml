@@ -155,6 +155,9 @@ jobs:
           )
           # Write captured output to GITHUB_OUTPUT
           echo "$PY_OUTPUT" >> "$GITHUB_OUTPUT"
+          echo "=== GITHUB_OUTPUT after write ==="
+          cat "$GITHUB_OUTPUT" || true
+          echo "=== END ===
 
       - name: Debug GITHUB_OUTPUT
         if: always()

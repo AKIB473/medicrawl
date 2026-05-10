@@ -412,3 +412,84 @@ class BypassSession:
             except Exception:
                 pass
         return None
+
+
+# ------------------------------------------------------------------ #
+# ParallelBypassSession — multiple concurrent bypass sessions           #
+# ------------------------------------------------------------------ #
+
+class ParallelBypassSession:
+    """
+    Multiple concurrent bypass sessions for parallel fetching.
+    Creates a pool of sessions with different impersonations.
+
+    Usage:
+        async with ParallelBypassSession("https://drugs.com", pool_size=4) as s:
+            results = await asyncio.gather(*[s.get(url) for url in urls])
+    """
+
+    def __init__(
+        self,
+        base_url: str = "",
+        *,
+        pool_size: int = 4,
+        rate_limit: float = 0.5,
+        rotate_impersonate: bool = True,
+    ):
+        self.base_url = base_url.rstrip("/")
+        self.pool_size = pool_size
+        self.rate_limit = rate_limit
+        self.rotate_impersonate = rotate_impersonate
+        self._sessions: list = []
+        self._session_idx = 0
+        self._semaphore = asyncio.Semaphore(pool_size)
+
+    async def __aenter__(self):
+        if not _curl_available:
+            return self
+        # Create pool of sessions
+        for _ in range(self.pool_size):
+            imp = random.choice(_CURL_IMPERSONATIONS)
+            sess = BypassSession(
+                self.base_url,
+                rate_limit=self.rate_limit,
+                impersonate=imp,
+            )
+            await sess.__aenter__()
+            self._sessions.append(sess)
+        return self
+
+    async def __aexit__(self, *args):
+        for sess in self._sessions:
+            try:
+                await sess.__aexit__(*args)
+            except Exception:
+                pass
+
+    async def _get_session(self) -> "BypassSession":  # type: ignore[no-any-return]
+        """Round-robin session selection."""
+        sess = self._sessions[self._session_idx % len(self._sessions)]
+        self._session_idx += 1
+        return sess
+
+    async def get(self, path_or_url: str, params: dict | None = None) -> str | None:
+        """GET with per-session rate limiting and retry."""
+        async with self._semaphore:
+            sess = await self._get_session()
+            html = await sess.get(path_or_url, params=params)
+            if html:
+                return html
+
+            # Fallback: try alternative bypass methods
+            url = path_or_url if path_or_url.startswith("http") else f"{self.base_url}{path_or_url}"
+            return await fetch_bypass(url, use_playwright_fallback=True)
+
+    async def fetch_all(self, urls: list[str], concurrency: int = 8) -> list[str | None]:
+        """Fetch multiple URLs concurrently with controlled concurrency."""
+        semaphore = asyncio.Semaphore(concurrency)
+
+        async def fetch_one(url: str) -> str | None:
+            async with semaphore:
+                return await self.get(url)
+
+        return await asyncio.gather(*[fetch_one(u) for u in urls])

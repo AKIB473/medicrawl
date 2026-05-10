@@ -3,10 +3,12 @@
 from __future__ import annotations
 
 import asyncio
+import httpx
 import logging
 import os
 import sys
 from pathlib import Path
+from typing import Optional
 
 import click
 from rich.console import Console
@@ -18,6 +20,8 @@ import yaml
 from utils.checkpoint import CheckpointManager, CheckpointState
 from utils.cache import HTTPCache
 from utils.metrics import MetricsCollector, ScrapeMetrics
+
+logger = logging.getLogger(__name__)
 
 # Bangladesh scrapers
 from scrapers.bangladesh.medex import MedExScraper
@@ -70,7 +74,7 @@ console = Console()
 # Load configuration
 # ---------------------------------------------------------------------------
 
-CONFIG = {}
+CONFIG: dict = {}
 
 def load_config(config_path: Path = Path("config/default.yaml")):
     global CONFIG
@@ -168,7 +172,7 @@ async def _run_scraper_advanced(
     scraper_name: str,
     data_dir: Path,
     ck_manager: CheckpointManager,
-    cache: HTTPCache,
+    cache: HTTPCache | None,
     metrics: MetricsCollector,
     concurrency_override: Optional[int] = None,
 ) -> ScrapeMeta:
@@ -203,8 +207,8 @@ async def _run_scraper_advanced(
         )
 
     try:
-        meta = await scraper.run()
-        return meta
+        meta = await scraper.run()  # type: ignore[no-any-return]
+        return meta  # type: ignore[no-any-return]
     except Exception as e:
         logger.error(f"Scraper {scraper_name} failed: {e}", exc_info=True)
         raise

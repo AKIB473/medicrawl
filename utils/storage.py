@@ -17,7 +17,7 @@ class Storage:
         path = self.base_dir / source / "drugs.json"
         if not path.exists():
             return []
-        return orjson.loads(path.read_bytes())
+        return orjson.loads(path.read_bytes())  # type: ignore[no-any-return]
 
     def save_drugs(self, source: str, drugs: list[dict]) -> str:
         path = self.base_dir / source / "drugs.json"
@@ -30,7 +30,7 @@ class Storage:
         path = self.base_dir / source / "meta.json"
         if not path.exists():
             return None
-        return orjson.loads(path.read_bytes())
+        return orjson.loads(path.read_bytes())  # type: ignore[no-any-return]
 
     def get_checksum(self, source: str) -> str | None:
         path = self.base_dir / source / "drugs.json"

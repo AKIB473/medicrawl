@@ -150,9 +150,9 @@ jobs:
                       'needs_playwright': any(s in STEALTH_SOURCES for s in picked),
                   })
 
-          print(f'Selected sources ({len(selected)}): {", ".join(selected)}')
-          print(f'Shards to run: {len(matrix)}')
-          print(f'Fullscrape mode: {use_fullscrape}')
+          print(f'Selected sources ({len(selected)}): {", ".join(selected)}', file=sys.stderr)
+          print(f'Shards to run: {len(matrix)}', file=sys.stderr)
+          print(f'Fullscrape mode: {use_fullscrape}', file=sys.stderr)
 
           # Write step outputs to stdout (redirected to GITHUB_OUTPUT)
           print(f"matrix={json.dumps(matrix)}")

@@ -62,7 +62,8 @@ jobs:
           INPUT_CATEGORY: ${{ github.event.inputs.category || 'all' }}
           INPUT_FULLSCRAPE: ${{ github.event.inputs.fullscrape || 'false' }}
         run: |
-          python - <<'PY' >> "$GITHUB_OUTPUT"
+          # Compute matrix using Python and capture output lines
+          PY_OUTPUT=$(python - <<'PY'
           import json, os, sys
 
           # All 27 sources
@@ -82,34 +83,24 @@ jobs:
               'research': ALL_SCRAPERS[26:],
           }
 
-          # Sensitive sites needing stealth
           STEALTH_SOURCES = {
               'drugbank', 'rxlist', 'drugs_com', 'mims', 'emc', 'webmd',
               'osudpotro', 'medeasy', 'dgda', 'arogga', 'lazzpharma', 'epocrates',
               'medscape',
           }
 
-          # ADVANCED SHARDING: smaller batches for faster completion
-          # Group sources by affinity & expected runtime
           SHARDS = [
-              # Bangladesh - lighter weight, can group 2-3
               ('bd-medex-dims', ['medex', 'dims']),
               ('bd-bdmedex-bddrugs', ['bdmedex', 'bddrugs']),
               ('bd-arogga-osudpotro', ['arogga', 'osudpotro']),
               ('bd-rest', ['dgda', 'bddrugstore', 'medeasy', 'lazzpharma', 'dghs_shr']),
-
-              # International APIs - fast, can batch many
               ('intl-api-1', ['openfda', 'rxnorm', 'dailymed']),
               ('intl-api-2', ['pubchem', 'chembl', 'kegg']),
               ('intl-api-3', ['ema', 'who_eml']),
-
-              # International scraping - slower, batch 2-3
               ('intl-scrape-1', ['drugs_com', 'rxlist']),
               ('intl-scrape-2', ['webmd', 'emc']),
               ('intl-scrape-3', ['mims']),
               ('intl-scrape-4', ['medscape', 'epocrates']),
-
-              # Research - DrugBank is the heaviest, give it its own shard
               ('research-drugbank', ['drugbank']),
               ('research-rest', ['pharmgkb', 'clincalc']),
           ]
@@ -150,16 +141,20 @@ jobs:
                       'needs_playwright': any(s in STEALTH_SOURCES for s in picked),
                   })
 
+          # Diagnostics to stderr
           print(f'Selected sources ({len(selected)}): {", ".join(selected)}', file=sys.stderr)
           print(f'Shards to run: {len(matrix)}', file=sys.stderr)
           print(f'Fullscrape mode: {use_fullscrape}', file=sys.stderr)
 
-          # Write step outputs to stdout (redirected to GITHUB_OUTPUT)
+          # Output key=value lines to stdout
           print(f"matrix={json.dumps(matrix)}")
           print(f"shard_count={len(matrix)}")
           print(f"use_fullscrape={'true' if use_fullscrape else 'false'}")
           print(f"selected_sources={','.join(selected)}")
           PY
+          )
+          # Write captured output to GITHUB_OUTPUT
+          echo "$PY_OUTPUT" >> "$GITHUB_OUTPUT"
 
       - name: Debug GITHUB_OUTPUT
         if: always()

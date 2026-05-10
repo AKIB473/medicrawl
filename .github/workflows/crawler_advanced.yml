@@ -69,7 +69,7 @@ jobs:
 
   scrape-shards:
     needs: plan
-    if: always()
+    if: needs.plan.outputs.shard_count != '0'
     runs-on: ubuntu-latest
     # Reduced timeout drastically - advanced version is faster!
     timeout-minutes: ${{ github.event.inputs.timeout || 30 }}

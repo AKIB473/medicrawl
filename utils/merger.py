@@ -304,7 +304,7 @@ def merge_drugs(raw_drugs: list[dict]) -> list[MergedDrug]:
         mol_weight: float | None = None
         for mw in mol_weight_vals:
             try:
-                mol_weight = float(mw)
+                mol_weight = float(mw)  # type: ignore[arg-type]
                 break
             except (TypeError, ValueError):
                 pass

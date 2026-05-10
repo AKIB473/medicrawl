@@ -151,6 +151,32 @@ jobs:
           merge-multiple: true
           path: shard-data/
 
+      - name: Verify checkpoint database
+        run: |
+          set -euo pipefail
+          echo "=== Checkpoint verification ==="
+          if [ -d "shard-data/.checkpoints" ]; then
+            echo "✓ Checkpoint directory found in shard artifacts"
+            cp -r shard-data/.checkpoints data/ 2>/dev/null || true
+            if command -v sqlite3 >/dev/null 2>&1; then
+              DB="data/.checkpoints/state.db"
+              if [ -f "$DB" ]; then
+                echo "Checkpoint database contents:"
+                sqlite3 "$DB" "SELECT scraper, status, urls_completed, drugs_saved, updated_at FROM checkpoints ORDER BY scraper" || true
+                echo ""
+                COMPLETED=$(sqlite3 "$DB" "SELECT COUNT(*) FROM checkpoints WHERE status='completed'")
+                TOTAL=$(sqlite3 "$DB" "SELECT COUNT(*) FROM checkpoints")
+                echo "Completed sources: $COMPLETED / $TOTAL"
+              else
+                echo "⚠ Checkpoint DB not found after copy"
+              fi
+            else
+              echo "⚠ sqlite3 not available; skipping DB inspection"
+            fi
+          else
+            echo "⚠ No .checkpoints directory in artifacts (this was a fresh run)"
+          fi
+
       - name: Merge shard outputs
         run: |
           set -euo pipefail

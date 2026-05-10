@@ -40,10 +40,10 @@ jobs:
   plan:
     runs-on: ubuntu-latest
     outputs:
-      matrix: ${{ steps.set-outputs.outputs.matrix }}
-      use_fullscrape: ${{ steps.set-outputs.outputs.use_fullscrape }}
-      selected_sources: ${{ steps.set-outputs.outputs.selected_sources }}
-      shard_count: ${{ steps.set-outputs.outputs.shard_count }}
+      matrix: ${{ steps.plan.outputs.matrix }}
+      use_fullscrape: ${{ steps.plan.outputs.use_fullscrape }}
+      selected_sources: ${{ steps.plan.outputs.selected_sources }}
+      shard_count: ${{ steps.plan.outputs.shard_count }}
 
     steps:
       - name: Checkout

@@ -15,40 +15,38 @@
 ### 3. `models/merged.py` - Duplicate field definitions (FIXED)
 - Removed duplicate chemical identifier fields (lines 88-97 were duplicates)
 
+### 4. Parallel Bypass Fetching (ADDED)
+- Created `utils/bypass.py` with `ParallelBypassSession` class
+- Implemented session pooling with round-robin selection
+- Added impersonation rotation for Cloudflare bypass
+
+### 5. Parallel Fetching Utilities (ADDED)
+- Created `utils/parallel.py` with `fetch_urls_parallel()` and `fetch_all_with_bypass()`
+- Configurable concurrency control
+- Error handling with failed URL isolation
+
 ## Remaining Mypy Warnings
 
 These are **non-blocking** - the code runs correctly:
 
 | File | Issue | Severity |
 |------|-------|----------|
-| `utils/storage.py` | orjson.loads returns Any | Low - runtime works |
-| `utils/change_detector.py` | orjson.loads returns Any | Low |
-| `utils/checkpoint.py` | Boolean return from fetchone | Low |
-| `utils/cache.py` | Assignment type mismatch | Low |
-| `utils/bypass.py` | Impersonate literal types | Low |
+| Scrapers | External library type stubs (orjson, scrapling, curl_cffi) | Low |
 | `scrapers/base.py` | Monkey-patch css_first | Low - runtime works |
-| `scrapers/base.py` | str \| None indexable | Low |
-| `scrapers/base.py` | Fetcher type assignments | Low |
-| `scrapers/base.py` | HTTPStatusError args | Low |
-| `scrapers/base.py` | _curl_session type annotation | Low |
-| `scrapers/base_advanced.py` | Missing annotations | Low |
 | `utils/merger.py` | float() arg type | Low |
 
 ## Test Results ✅
 
 ```
 ✓ All critical imports work
-✓ main.py CLI works
+✓ main.py CLI works (27 scrapers)
 ✓ main_advanced.py CLI works
 ✓ list command works
-✅ All tests passed!
+✓ Bypass fetch works (httpbin.org/html - 3739 chars)
+✓ Parallel fetch works (2/3 URLs)
+✓ RxNorm scraper works (5 drugs fetched)
 ```
 
 ## Recommendation
 
-The mypy warnings are mostly about:
-1. External library type stubs (orjson, scrapling, curl_cffi)
-2. Monkey-patching dynamic attributes
-3. Union types (str | None) being indexable when None-check exists
-
-**These do not block execution.** The codebase is functional.
+The mypy warnings are mostly about external library type stubs and do not block execution. The codebase is fully functional with parallel bypass capabilities.

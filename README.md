@@ -126,13 +126,13 @@
 
   <!-- Title with typing cursor effect -->
   <text x="360" y="185" text-anchor="middle" fill="#c9d1d9" font-family="'Segoe UI', 'Helvetica', 'Arial', sans-serif" font-size="20" font-weight="700">
-    <tspan>⚡ Parallel • 💾 Checkpoint • 📡 Cache</tspan>
+    <tspan>⚡ Parallel • 💾 Checkpoint • 📡 Cache • 🔁 Bypass</tspan>
     <animate attributeName="fill" values="#c9d1d9;#58a6ff;#2ea043;#c9d1d9" dur="6s" repeatCount="indefinite"/>
   </text>
 
   <!-- Subtitle with wave animation -->
   <text x="360" y="210" text-anchor="middle" fill="#8b949e" font-family="'Segoe UI', 'Helvetica', 'Arial', sans-serif" font-size="12">
-    <tspan>40+ Sources • 30 Shards • Zero Waste</tspan>
+    <tspan>27 Sources • Zero Waste</tspan>
     <animateTransform attributeName="transform" type="translate" values="0,0;0,-3;0,0" dur="3s" repeatCount="indefinite" additive="sum"/>
   </text>
 </svg>
@@ -145,7 +145,7 @@
 
 ## 🌟 Overview
 
-**Medicrawl Advanced** is a production‑grade, ultra‑fast pipeline that scrapes medicine data from 40+ global sources in parallel, with zero data loss, intelligent caching, circuit breakers, and full observability.
+**Medicrawl Advanced** is a production‑grade, ultra‑fast pipeline that scrapes medicine data from 27 global sources in parallel, with zero data loss, intelligent caching, circuit breakers, and full observability.
 
 Built on top of the original medicrawl, this edition avoids GitHub Actions 6‑hour timeouts by sharding work into 30‑minute parallel jobs and making every scraper resumable.
 

@@ -120,14 +120,29 @@ class AdvancedScraperMixin:
     # ------------------------------------------------------------------ #
 
     def filter_checkpoint(self, urls: list) -> list:
-        """Exclude URLs already completed according to checkpoint manager."""
+        """Exclude URLs already completed according to checkpoint manager.
+
+        The checkpoint manager stores SHA256(url)[:32] for each completed URL.
+        We must compute the same truncated hash for each candidate URL and
+        filter out those whose hash appears in the completed set.
+        """
         if not self.checkpoint_manager:
             return urls
-        completed = self.checkpoint_manager.get_completed_urls(self.name)
+        # Get set of completed URL hashes for this scraper
+        completed_hashes = self.checkpoint_manager.get_completed_urls(self.name)
+        if not completed_hashes:
+            return urls
         total_before = len(urls)
-        filtered = [u for u in urls if u not in completed]
+        # Compute truncated SHA256 hash for each URL and filter
+        filtered = [
+            u for u in urls
+            if hashlib.sha256(u.encode()).hexdigest()[:32] not in completed_hashes
+        ]
         if total_before > len(filtered):
-            logger.info(f"{self.name}: filtered {total_before - len(filtered)} already-done URLs ({len(filtered)} remaining)")
+            logger.info(
+                f"{self.name}: filtered {total_before - len(filtered)} already-done URLs "
+                f"({len(filtered)} remaining)"
+            )
         return filtered
 
     # ------------------------------------------------------------------ #
@@ -275,6 +290,24 @@ class AdvancedScraperMixin:
         meta_file = self.data_dir / "meta.json"
         meta_file.write_bytes(orjson.dumps(meta.model_dump(mode="json"), option=orjson.OPT_INDENT_2))
         logger.info(f"[{self.name}] Done: {meta.total_drugs} drugs in {meta.duration_seconds:.1f}s")
+
+        # Save final checkpoint state to allow source-level resuming
+        if self.checkpoint_manager:
+            status = "completed" if meta.errors == 0 else "failed"
+            state = CheckpointState(
+                scraper_name=self.name,
+                started_at=start,
+                last_update=time.time(),
+                urls_total=meta.total_drugs,  # best-effort estimate
+                urls_completed=meta.total_drugs,
+                drugs_saved=meta.total_drugs,
+                errors=meta.errors,
+                last_url=None,
+                eta_seconds=None,
+                status=status,
+            )
+            self.checkpoint_manager.save(state)
+
         return meta
 
     @staticmethod

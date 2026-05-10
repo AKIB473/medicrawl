@@ -176,7 +176,7 @@ jobs:
       - name: Force job outputs via explicit echo
         if: always()
         run: |
-          echo "matrix=${{ toJson(steps.plan.outputs.matrix) }}" >> $GITHUB_OUTPUT
+          echo "matrix=${{ steps.plan.outputs.matrix }}" >> $GITHUB_OUTPUT
           echo "shard_count=${{ steps.plan.outputs.shard_count }}" >> $GITHUB_OUTPUT
           echo "use_fullscrape=${{ steps.plan.outputs.use_fullscrape }}" >> $GITHUB_OUTPUT
           echo "selected_sources=${{ steps.plan.outputs.selected_sources }}" >> $GITHUB_OUTPUT
